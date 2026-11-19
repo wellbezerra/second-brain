@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULTS } from "../src/config.js";
+import { ConfigError, DEFAULTS } from "../src/config.js";
 import type { ProviderName, Settings } from "../src/config.js";
 import { EmbedError } from "../src/embed.js";
 import { createEmbedder } from "../src/embedders/index.js";
@@ -55,6 +55,16 @@ describe("createEmbedder", () => {
     await embedder.embed(["x"]);
     expect(calls[0]!.url.host).toBe("api.voyageai.com");
   });
+
+  it.each(["nao-e-url", "ftp://api.voyageai.com/v1", "file:///etc/passwd"])(
+    "VOYAGE_BASE_URL inválida (%s) é ConfigError orientado, não TypeError",
+    (url) => {
+      const create = () => createEmbedder(settings("voyage", "voyage-4"), { VOYAGE_API_KEY: "v-1", VOYAGE_BASE_URL: url });
+      expect(create).toThrow(ConfigError);
+      expect(create).toThrow(/VOYAGE_BASE_URL/);
+      expect(create).not.toThrow(/v-1/);
+    },
+  );
 
   it("Ollama usa ollama_url da configuração", () => {
     const embedder = createEmbedder({ ...settings("ollama", "bge-m3"), ollamaUrl: "http://outra:1" }, {});

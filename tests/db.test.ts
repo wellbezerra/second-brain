@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BrainIndex, IndexError, SCHEMA_VERSION, indexPath } from "../src/db.js";
 import type { IndexIdentity } from "../src/db.js";
@@ -145,6 +145,25 @@ describe("identidade do índice: provedor, modelo e dimensão", () => {
     index.close();
     expect(() => BrainIndex.open(path, IDENTITY)).toThrow(/versão mais nova/);
   });
+
+  it("arquivo que não é SQLite vira IndexError orientado, não erro cru do driver", () => {
+    const path = join(tempDir(), ".brain", "index.db");
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "isto não é um banco SQLite, só texto qualquer com tamanho suficiente".repeat(20));
+    for (const identity of [IDENTITY, undefined]) {
+      const error = (() => {
+        try {
+          BrainIndex.open(path, identity);
+        } catch (e) {
+          return e;
+        }
+      })() as IndexError;
+      expect(error).toBeInstanceOf(IndexError);
+      expect(error.kind).toBe("corrupt");
+      expect(error.message).toContain(path);
+      expect(error.message).toContain("brain index --rebuild");
+    }
+  });
 });
 
 describe("escrita", () => {
@@ -186,6 +205,16 @@ describe("escrita", () => {
     const good = await embedder.embed(["um"]);
     expect(() => index.insertChunks(id, chunks("um", "dois"), [good[0]!, [1, 2, 3]])).toThrow(/dimensão 3/);
     expect(index.counts().chunks).toBe(0);
+    index.close();
+  });
+
+  it.each([NaN, Infinity, -Infinity])("vetor com %s falha antes de escrever", async (bad) => {
+    const { index } = open();
+    const id = index.upsertFile(file("a.md"));
+    const [good, poisoned] = await embedder.embed(["um", "dois"]);
+    poisoned![3] = bad;
+    expect(() => index.insertChunks(id, chunks("um", "dois"), [good!, poisoned!])).toThrow(/não finito/);
+    expect(index.counts()).toEqual({ files: 1, chunks: 0, fts: 0, vec: 0 });
     index.close();
   });
 

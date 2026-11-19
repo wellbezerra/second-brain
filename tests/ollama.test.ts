@@ -172,6 +172,30 @@ describe("OllamaEmbedder", () => {
     await expect(embedder.embed(["a", "b"])).rejects.toThrow(EmbedError);
   });
 
+  it("resposta que não é JSON vira EmbedError, não SyntaxError", async () => {
+    const { embedder } = client(() => new Response("<html>proxy</html>", { status: 200 }));
+    const error = (await embedder.embed(["a"]).catch((e: unknown) => e)) as EmbedError;
+    expect(error).toBeInstanceOf(EmbedError);
+    expect(error.kind).toBe("bad-response");
+    expect(error.message).toBe("o Ollama devolveu uma resposta que não é JSON");
+  });
+
+  it("resposta que não é JSON no modo antigo também vira EmbedError", async () => {
+    const { embedder } = client((path) =>
+      path === "/api/embed"
+        ? new Response("404 page not found", { status: 404 })
+        : new Response("<html>", { status: 200 }),
+    );
+    await expect(embedder.embed(["a"])).rejects.toMatchObject({ kind: "bad-response" });
+  });
+
+  it("número que estoura o float (1e999 vira Infinity) é erro, não vetor", async () => {
+    const { embedder } = client(
+      () => new Response('{"embeddings":[[1e999,1,2]]}', { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    await expect(embedder.embed(["a"])).rejects.toMatchObject({ kind: "bad-response" });
+  });
+
   it("outro erro HTTP vira EmbedError com o status", async () => {
     const { embedder } = client(() => json({ error: "falhou" }, 500));
     await expect(embedder.embed(["a"])).rejects.toThrow(/500/);
@@ -189,6 +213,11 @@ describe("OllamaEmbedder", () => {
       expect(await client(tags(["nomic-embed-text:latest"])).embedder.health()).toBe(
         "o modelo 'bge-m3' não está baixado. Rode: ollama pull bge-m3",
       );
+    });
+
+    it("lista de modelos que não é JSON vira problema, não exceção", async () => {
+      const { embedder } = client(() => new Response("<html>", { status: 200 }));
+      expect(await embedder.health()).toBe("o Ollama devolveu uma resposta que não é JSON");
     });
 
     it("aponta o Ollama fora do ar", async () => {

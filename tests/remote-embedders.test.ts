@@ -204,6 +204,17 @@ describe.each([openai, gemini, voyage])("$name", (p) => {
     expect(error.kind).toBe("bad-response");
   });
 
+  it("número que estoura o float (1e999 vira Infinity) é erro, não vetor", async () => {
+    const { embedder } = setup(async (call) => {
+      // Troca o primeiro número de um vetor por 1e999, que JSON.parse lê como Infinity.
+      const body = (await p.ok(call).text()).replace(/:\[\d+/, ":[1e999");
+      return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
+    });
+    const error = (await embedder.embed(["x"]).catch((e: unknown) => e)) as EmbedError;
+    expect(error).toBeInstanceOf(EmbedError);
+    expect(error.kind).toBe("bad-response");
+  });
+
   it("outro 4xx mostra a mensagem do provedor", async () => {
     const { embedder } = setup(() => p.error(400, "input too long"));
     const error = (await embedder.embed(["x"]).catch((e: unknown) => e)) as EmbedError;
