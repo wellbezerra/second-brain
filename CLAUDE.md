@@ -17,7 +17,7 @@ Node 24, strict TypeScript, ESM, Biome (lint + format), Vitest
 ([ADR 011](docs/adr/011-node-typescript-runtime.md)).
 
 ```sh
-make setup        # install dependencies
+make setup        # install dependencies and the git hooks (core.hooksPath)
 make check-fast   # Biome, tsc, unit tests — seconds; your inner loop
 make check-full   # check-fast + integration tests + retrieval evals
 make dev          # unit tests in watch mode
@@ -31,6 +31,10 @@ Two levels on purpose: [ADR 013](docs/adr/013-two-level-verification-gate.md).
 
 - `src/cli.ts` — the only module that prints, reads stdin or calls `process.exit`
 - `src/commands.ts` — turns argv into a command; pure
+- `scripts/hooks/` — git hooks: pre-commit (size, secrets, `.env`, format,
+  no commit on main) and pre-push (no push to main, `check-fast`)
+- `.claude/hooks/` — Claude Code hooks: write guard, format-on-edit, session
+  log in `.harness/sessions/` (git-ignored)
 - `tests/unit/` — unit tests, run by `check-fast`
 - `tests/integration/` — integration tests, run by `check-full` only
 
@@ -94,3 +98,5 @@ the pull request that contradicts it.
 - No file above 5,000 tokens (≈ 20,000 bytes). Split by responsibility.
 - No commit on `main`.
 - No secrets in code, logs or context. Never read `.env*` files.
+- The hooks enforce these. When one blocks you, fix the cause; never bypass it
+  (`--no-verify`, editing the hooks to get a change through).
