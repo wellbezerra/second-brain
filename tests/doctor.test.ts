@@ -45,7 +45,7 @@ describe("runDoctor", () => {
   it("tudo certo: todos os itens ok, na ordem, dizendo para onde os trechos vão", async () => {
     const { embedder, calls } = openai("sk-x");
     const checks = await runDoctor({ nodeVersion: "v24.11.0", settings: settings(tempDir()), embedder });
-    expect(checks.map((c) => c.name)).toEqual(["node", "provedor", "dimensão", "vault"]);
+    expect(checks.map((c) => c.name)).toEqual(["node", "sqlite", "sqlite-vec", "provedor", "dimensão", "vault"]);
     expect(checks.every((c) => c.status === "ok")).toBe(true);
     const provider = checks.find((c) => c.name === "provedor")!.detail;
     expect(provider).toContain("openai");
@@ -59,7 +59,7 @@ describe("runDoctor", () => {
   it("sem chave, o provedor falha sem chamar a rede, e a dimensão é pulada", async () => {
     const { embedder, calls } = openai(undefined);
     const checks = await runDoctor({ nodeVersion: "v24.11.0", settings: settings(tempDir()), embedder });
-    expect(statuses(checks)).toEqual({ node: "ok", provedor: "fail", dimensão: "skip", vault: "ok" });
+    expect(statuses(checks)).toEqual({ node: "ok", sqlite: "ok", "sqlite-vec": "ok", provedor: "fail", dimensão: "skip", vault: "ok" });
     expect(checks.find((c) => c.name === "provedor")!.detail).toContain("OPENAI_API_KEY");
     expect(calls).toEqual([]);
   });
@@ -76,7 +76,7 @@ describe("runDoctor", () => {
       settings: settings(tempDir()),
       embedder: ollama({ up: false }),
     });
-    expect(statuses(checks)).toEqual({ node: "ok", provedor: "fail", dimensão: "skip", vault: "ok" });
+    expect(statuses(checks)).toEqual({ node: "ok", sqlite: "ok", "sqlite-vec": "ok", provedor: "fail", dimensão: "skip", vault: "ok" });
     expect(checks.find((c) => c.name === "provedor")!.detail).toContain("ollama serve");
   });
 
@@ -98,6 +98,24 @@ describe("runDoctor", () => {
     });
     expect(checks.every((c) => c.status === "ok")).toBe(true);
     expect(checks.find((c) => c.name === "dimensão")!.detail).toContain("1024");
+  });
+
+  it("SQLite real: versão, FTS5 e sqlite-vec carregando", async () => {
+    const checks = await runDoctor({ nodeVersion: "v24.0.0", settings: settings(tempDir()), embedder: new HashEmbedder() });
+    expect(checks.find((c) => c.name === "sqlite")!.detail).toMatch(/^3.d+.d+ com FTS5$/);
+    expect(checks.find((c) => c.name === "sqlite-vec")!.detail).toMatch(/^vd+.d+/);
+  });
+
+  it("SQLite sem FTS5 ou sqlite-vec que não carrega falham com orientação", async () => {
+    const checks = await runDoctor({
+      nodeVersion: "v24.0.0",
+      settings: settings(tempDir()),
+      embedder: new HashEmbedder(),
+      sqlite: () => ({ version: "3.40.0", fts5: false, vec: { error: "LoadExtension falhou" } }),
+    });
+    expect(statuses(checks)).toMatchObject({ sqlite: "fail", "sqlite-vec": "fail" });
+    expect(checks.find((c) => c.name === "sqlite")!.detail).toContain("FTS5");
+    expect(checks.find((c) => c.name === "sqlite-vec")!.detail).toContain("LoadExtension falhou");
   });
 
   it("Node antigo falha", async () => {
