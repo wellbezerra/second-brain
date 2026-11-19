@@ -20,9 +20,11 @@
     "format": "biome format --write .",
     "test:unit": "vitest run --dir tests/unit",
     "test:integration": "vitest run --dir tests/integration --passWithNoTests",
-    "check:fast": "npm run lint && npm run typecheck && npm run test:unit",
-    "check:full": "npm run check:fast && npm run test:integration",
-    "dev": "vitest --dir tests/unit"
+    "check:fast": "npm run lint && npm run typecheck && npm run check:layers && npm run test:unit",
+    "check:full": "node --disable-warning=ExperimentalWarning scripts/run-locked.ts npm run check:full:run",
+    "dev": "vitest --dir tests/unit",
+    "check:layers": "node --disable-warning=ExperimentalWarning scripts/check-test-layers.ts",
+    "check:full:run": "npm run check:fast && npm run test:integration"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",
