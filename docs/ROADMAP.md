@@ -58,7 +58,7 @@ instead of a prototype that worked once.
 - **Green suite at the end of every commit.** No "fix it in the next one".
 - **User-visible behaviour ships behind a flag**, off by default
   ([ADR 014](adr/014-one-pr-per-feature-behind-a-flag.md)).
-- **No test requires Ollama.** `HashEmbedder` exists for that since spec 03.
+- **No test requires Ollama.** `FakeEmbedder` exists for that since spec 03.
   Breaking this rule makes CI impossible.
 - **A changed decision changes the ADR.** An accepted ADR is not edited: a new
   one supersedes it. The spec, on the other hand, may be corrected when the
