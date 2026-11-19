@@ -1,0 +1,153 @@
+name: PR Governance
+
+# Enforces: labels, project, assignee, branch naming and English-only titles/commits.
+# Uses pull_request_target so the token can write on PRs. This is safe because the
+# workflow NEVER checks out or executes code from the PR.
+on:
+  pull_request_target:
+    types: [opened, reopened, edited, synchronize, labeled, unlabeled, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: pr-governance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: Auto assign, label and add to project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign owner and label from branch prefix
+        uses: actions/github-script@v7
+        env:
+          PR_ASSIGNEE: ${{ vars.PR_ASSIGNEE || github.repository_owner }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+
+            // 1) Assignee is always the owner (override with repo variable PR_ASSIGNEE)
+            const assignee = process.env.PR_ASSIGNEE;
+            if (!pr.assignees.some(a => a.login.toLowerCase() === assignee.toLowerCase())) {
+              await github.rest.issues.addAssignees({
+                owner, repo, issue_number: pr.number, assignees: [assignee],
+              });
+            }
+
+            // 2) Label derived from the branch prefix
+            const prefixToLabel = {
+              feat: 'feature', feature: 'feature',
+              fix: 'fix', bugfix: 'fix',
+              bug: 'bug', hotfix: 'hotfix',
+              chore: 'chore', docs: 'docs', refactor: 'refactor',
+              test: 'test', ci: 'ci', perf: 'performance',
+              build: 'build', style: 'style',
+            };
+            const prefix = pr.head.ref.split('/')[0];
+            const label = prefixToLabel[prefix];
+            if (label && !pr.labels.some(l => l.name === label)) {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: pr.number, labels: [label],
+              });
+            }
+
+      - name: Add PR to project
+        if: ${{ vars.PROJECT_URL != '' }}
+        uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: ${{ vars.PROJECT_URL }}
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+
+  validate:
+    name: Validate PR rules
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch, title, commits, labels and project
+        uses: actions/github-script@v7
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PR_ASSIGNEE: ${{ vars.PR_ASSIGNEE || github.repository_owner }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+            const errors = [];
+
+            // Skip bot PRs (dependabot / renovate) for naming rules
+            const isBot = pr.user.type === 'Bot';
+
+            // ---------- English-only heuristic ----------
+            const ptWords = [
+              'para','com','uma','não','nao','correção','correcao','corrigir','adicionar',
+              'ajuste','ajustes','criar','criação','criacao','remover','atualizar','alterar',
+              'implementar','funcionalidade','erro','arquivo','tela','usuário','usuario',
+              'também','tambem','ainda','sobre','quando','isso','esse','essa',
+            ];
+            const isEnglish = (text) => {
+              if (/[À-ÖØ-öø-ÿ]/.test(text)) return false; // accented chars (ã, ç, é...)
+              const words = text.toLowerCase().match(/[a-z]+/g) || [];
+              return !words.some(w => ptWords.includes(w));
+            };
+
+            // ---------- Branch name ----------
+            const branchRe = /^(feat|feature|fix|bugfix|bug|hotfix|chore|docs|refactor|test|ci|perf|build|style)\/[a-z0-9][a-z0-9._-]*$/;
+            if (!isBot && !branchRe.test(pr.head.ref)) {
+              errors.push(`Branch "${pr.head.ref}" is invalid. Use <type>/<kebab-case-description>, e.g. feat/add-login.`);
+            }
+            if (pr.head.ref === 'main') errors.push('PRs must come from a dedicated branch, never from main.');
+
+            // ---------- Conventional + English ----------
+            const convRe = /^(feat|fix|bug|hotfix|chore|docs|refactor|test|ci|perf|build|style|revert)(\([\w./-]+\))?!?: \S.+/;
+            if (!isBot) {
+              if (!convRe.test(pr.title)) errors.push(`PR title must follow Conventional Commits (e.g. "feat(auth): add login"). Got: "${pr.title}"`);
+              if (!isEnglish(pr.title)) errors.push('PR title must be in English.');
+              if (pr.body && !isEnglish(pr.body)) errors.push('PR description must be in English.');
+            }
+
+            // ---------- Commits ----------
+            if (!isBot) {
+              const commits = await github.paginate(github.rest.pulls.listCommits, {
+                owner, repo, pull_number: pr.number, per_page: 100,
+              });
+              for (const c of commits) {
+                const msg = c.commit.message;
+                const subject = msg.split('\n')[0];
+                if (/^Merge /.test(subject)) continue;
+                if (!convRe.test(subject)) errors.push(`Commit ${c.sha.slice(0,7)} must follow Conventional Commits: "${subject}"`);
+                if (!isEnglish(msg)) errors.push(`Commit ${c.sha.slice(0,7)} must be in English: "${subject}"`);
+              }
+            }
+
+            // ---------- Labels (fresh read, setup job may have just added one) ----------
+            const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: pr.number });
+            if (issue.labels.length === 0) errors.push('PR must have at least one label.');
+
+            // ---------- Assignee ----------
+            const expected = process.env.PR_ASSIGNEE || context.repo.owner;
+            if (!issue.assignees.length) errors.push(`PR must have an assignee (expected: ${expected}).`);
+
+            // ---------- Project ----------
+            if (!process.env.PROJECT_TOKEN) {
+              errors.push('Secret PROJECT_TOKEN is missing, so the project link cannot be verified. See .github/CONTRIBUTING.md.');
+            } else {
+              const res = await fetch('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: { Authorization: `bearer ${process.env.PROJECT_TOKEN}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  query: `query($id:ID!){ node(id:$id){ ... on PullRequest { projectItems(first:1){ totalCount } } } }`,
+                  variables: { id: pr.node_id },
+                }),
+              });
+              const json = await res.json();
+              const total = json?.data?.node?.projectItems?.totalCount ?? 0;
+              if (total === 0) errors.push('PR must be linked to a GitHub Project.');
+            }
+
+            if (errors.length) {
+              core.setFailed('PR governance failed:\n- ' + errors.join('\n- '));
+            }
