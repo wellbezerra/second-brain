@@ -1,0 +1,27 @@
+{
+  "name": "brain",
+  "version": "0.1.0",
+  "description": "Segundo cérebro local: busca híbrida sobre um vault Obsidian",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "brain": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}
