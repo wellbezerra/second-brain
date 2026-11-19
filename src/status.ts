@@ -7,29 +7,29 @@ import { scanVault } from "./vault.js";
 export interface StatusInput {
   vault: string;
   excludes: readonly string[];
-  /** Provedor e modelo da configuração atual, para comparar com os do índice. */
+  /** Provider and model from the current configuration, to compare with the index ones. */
   configured: { provider: string; model: string };
 }
 
 export interface Status {
   vault: string;
   indexPath: string;
-  /** O arquivo de índice existe. `status` nunca o cria. */
+  /** The index file exists. `status` never creates it. */
   exists: boolean;
-  /** Quem gerou os vetores do índice; `undefined` antes da primeira indexação. */
+  /** Who produced the index vectors; `undefined` before the first indexing. */
   identity: IndexIdentity | undefined;
   configured: { provider: string; model: string };
-  /** A configuração pede outro provedor ou modelo que o do índice. */
+  /** The configuration asks for a provider or model other than the index one. */
   identityMismatch: boolean;
   counts: Counts;
-  /** Banco mais WAL. */
+  /** Database plus WAL. */
   sizeBytes: number;
-  /** Milissegundos desde a época. */
+  /** Milliseconds since the epoch. */
   lastIndexAt: number | undefined;
   /**
-   * Notas que mudaram no disco desde a última indexação (ADR 009): a busca
-   * responde pelo índice, não pelo disco. "Alterada" aqui é mtime ou
-   * tamanho diferente — barato de medir; o hash fica para o `brain index`.
+   * Notes that changed on disk since the last indexing (ADR 009): search
+   * answers from the index, not from the disk. "Changed" here means a different
+   * mtime or size, which is cheap to measure; hashing is left to `brain index`.
    */
   pending: { new: number; changed: number; removed: number };
   warnings: string[];

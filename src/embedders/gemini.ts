@@ -5,12 +5,12 @@ import type { RemoteOptions } from "./remote.js";
 
 const BASE_URL = "https://generativelanguage.googleapis.com";
 
-/** Modelos anteriores ao gemini-embedding-2 recebem o propósito em `taskType`. */
+/** Models older than gemini-embedding-2 receive the purpose in `taskType`. */
 const LEGACY_MODEL = /^(gemini-embedding-001|text-embedding-|embedding-)/;
 
 /**
- * `batchEmbedContents`. O gemini-embedding-2 não aceita `taskType`: o
- * propósito vai no próprio texto, no formato que a documentação do Google pede.
+ * `batchEmbedContents`. gemini-embedding-2 does not accept `taskType`: the
+ * purpose goes in the text itself, in the format Google's documentation asks for.
  */
 export class GeminiEmbedder extends RemoteEmbedder {
   readonly provider = "gemini";

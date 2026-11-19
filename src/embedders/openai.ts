@@ -4,7 +4,7 @@ import type { RemoteOptions } from "./remote.js";
 
 const BASE_URL = "https://api.openai.com/v1";
 
-/** `POST /v1/embeddings`. Não distingue documento de consulta. */
+/** `POST /v1/embeddings`. Does not distinguish document from query. */
 export class OpenAIEmbedder extends RemoteEmbedder {
   readonly provider = "openai";
 

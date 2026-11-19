@@ -4,10 +4,10 @@ import { RETRIES, TIMEOUT_MS, postJson, realSleep } from "./http.js";
 import type { ProviderInfo } from "./http.js";
 
 export interface RemoteOptions {
-  /** Ausente ou vazia: nenhum texto é enviado, e o erro diz qual variável definir. */
+  /** Missing or empty: no text is sent, and the error says which variable to set. */
   apiKey: string | undefined;
   model?: string;
-  /** Injetáveis para teste. */
+  /** Injectable for tests. */
   fetch?: typeof globalThis.fetch;
   sleep?: (ms: number) => Promise<void>;
   timeoutMs?: number;
@@ -15,7 +15,7 @@ export interface RemoteOptions {
 
 const BATCH_SIZE = 100;
 
-/** Base dos clientes de API: lotes, chave, normalização, dimensão e saúde. */
+/** Base for the API clients: batches, key, normalization, dimension and health. */
 export abstract class RemoteEmbedder implements Embedder {
   abstract readonly provider: string;
   readonly model: string;
@@ -84,7 +84,7 @@ export abstract class RemoteEmbedder implements Embedder {
     }
   }
 
-  /** Um lote, já dentro do limite de tamanho; devolve vetores na ordem de entrada. */
+  /** One batch, already within the size limit; returns vectors in input order. */
   protected abstract embedBatch(batch: readonly string[], purpose: EmbedPurpose): Promise<number[][]>;
 
   protected post(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
@@ -107,7 +107,7 @@ export abstract class RemoteEmbedder implements Embedder {
   }
 }
 
-/** `data: [{ index, embedding }]`, o formato de OpenAI e Voyage, em ordem de entrada. */
+/** `data: [{ index, embedding }]`, the OpenAI and Voyage format, in input order. */
 export function indexedEmbeddings(data: unknown, isVector: (v: unknown) => v is number[]): number[][] | undefined {
   const items = (data as { data?: unknown } | null)?.data;
   if (!Array.isArray(items)) return undefined;

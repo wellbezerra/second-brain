@@ -3,11 +3,11 @@ import { basename, extname, join } from "node:path";
 import { FenceTracker, parseHeading } from "./markdown.js";
 
 export interface Note {
-  /** Caminho relativo à raiz do vault, sempre com `/`. */
+  /** Path relative to the vault root, always with `/`. */
   path: string;
   title: string;
   frontmatter: Record<string, string>;
-  /** Texto sem o frontmatter, com quebras de linha normalizadas para `\n`. */
+  /** Text without frontmatter, with line breaks normalized to `\n`. */
   body: string;
 }
 
@@ -17,9 +17,9 @@ export interface ScanResult {
 }
 
 /**
- * Lista as notas `.md` do vault, relativas à raiz e em ordem estável.
- * Pula pastas excluídas, itens ocultos e links simbólicos; o que não dá para
- * ler vira aviso.
+ * Lists the vault `.md` notes, relative to the root and in stable order.
+ * Skips excluded folders, hidden entries and symbolic links; anything that cannot
+ * be read becomes a warning.
  */
 export function scanVault(root: string, excludes: readonly string[]): ScanResult {
   const excluded = new Set(excludes.map((e) => e.replace(/\\/g, "/").replace(/\/+$/, "")));
@@ -52,7 +52,7 @@ export function scanVault(root: string, excludes: readonly string[]): ScanResult
   return { files, warnings };
 }
 
-/** Lê uma nota: separa frontmatter e corpo e resolve o título. */
+/** Reads a note: splits frontmatter and body and resolves the title. */
 export function readNote(root: string, path: string): Note {
   const raw = readFileSync(join(root, ...path.split("/")), "utf8");
   const text = raw.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
@@ -65,7 +65,7 @@ export interface VaultNotes {
   warnings: string[];
 }
 
-/** Varre e lê o vault inteiro. Nota ilegível vira aviso, não interrupção. */
+/** Scans and reads the whole vault. An unreadable note becomes a warning, not an abort. */
 export function readVault(root: string, excludes: readonly string[]): VaultNotes {
   const { files, warnings } = scanVault(root, excludes);
   const notes: Note[] = [];
@@ -80,8 +80,8 @@ export function readVault(root: string, excludes: readonly string[]): VaultNotes
 }
 
 /**
- * Frontmatter raso: só `chave: valor` de primeiro nível. Listas, blocos
- * aninhados e valores vazios são ignorados. Sem fechamento, tudo é corpo.
+ * Shallow frontmatter: only top-level `key: value`. Lists, nested blocks
+ * and empty values are ignored. Without a closing fence, everything is body.
  */
 export function parseFrontmatter(text: string): {
   data: Record<string, string>;

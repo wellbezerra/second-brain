@@ -172,9 +172,9 @@ describe("provedor", () => {
     const f = file();
     writeConfig(f, { vault: "/v", provider: "ollama", model: "nomic-embed-text" });
     expect(loadConfig({ env: {}, file: f }).model).toBe("nomic-embed-text");
-    // Trocar de provedor pelo ambiente não arrasta o modelo do Ollama para a OpenAI.
+    // Switching provider through the environment does not carry the Ollama model over to OpenAI.
     expect(loadConfig({ env: { BRAIN_PROVIDER: "openai" }, file: f }).model).toBe("text-embedding-3-small");
-    // Modelo explícito sempre vence.
+    // An explicit model always wins.
     expect(
       loadConfig({ args: { model: "text-embedding-3-large" }, env: { BRAIN_PROVIDER: "openai" }, file: f }).model,
     ).toBe("text-embedding-3-large");

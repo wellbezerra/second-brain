@@ -17,7 +17,7 @@ function vault() {
   return root;
 }
 
-/** Grava no manifesto o estado atual do disco, como uma indexação faria. */
+/** Writes the current disk state to the manifest, as indexing would. */
 function indexAsOnDisk(root: string, paths: string[]) {
   const index = BrainIndex.open(indexPath(root), IDENTITY);
   for (const path of paths) {

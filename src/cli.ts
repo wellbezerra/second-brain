@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Única camada que conhece parseArgs, stdout, stdin e process.exit.
+// The only layer that knows about parseArgs, stdout, stdin and process.exit.
 import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
 import { ConfigError, loadConfig, loadSettings, parseProvider } from "./config.js";
@@ -218,7 +218,7 @@ async function confirmCreate(path: string): Promise<boolean> {
 }
 
 function printInit(result: InitResult): void {
-  // Ambiente vazio: mostra o que ficou gravado, não o que BRAIN_* sobrepõe agora.
+  // Empty environment: show what was saved, not what BRAIN_* overrides right now.
   const settings = loadSettings({ env: {}, file: result.configFile });
   const keyVar = API_KEY_VARS[settings.provider];
   if (result.created) console.log(`Pasta criada: ${result.vault}`);

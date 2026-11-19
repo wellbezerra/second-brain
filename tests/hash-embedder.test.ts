@@ -15,7 +15,7 @@ describe("HashEmbedder", () => {
   });
 
   it("dá sempre o mesmo vetor para o mesmo texto, em qualquer processo", async () => {
-    // Valor fixo: se mudar, mudou o algoritmo, e índices de teste antigos deixam de valer.
+    // Fixed value: if it changes, the algorithm changed and old test indexes are no longer valid.
     const [v] = await embedder.embed(["Vetorização local com Ollama, vetorização!"]);
     const expected = new Array(64).fill(0);
     expected[26] = expected[35] = expected[63] = 1 / Math.sqrt(7);

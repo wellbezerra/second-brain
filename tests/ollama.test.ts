@@ -9,7 +9,7 @@ interface Call {
 
 type Handler = (path: string, body: Record<string, unknown> | undefined) => Response;
 
-/** fetch falso: registra as chamadas e responde com o handler. */
+/** Fake fetch: records the calls and answers with the handler. */
 function fakeFetch(handler: Handler) {
   const calls: Call[] = [];
   const fetch = async (input: string | URL | Request, init?: RequestInit) => {
@@ -24,7 +24,7 @@ function fakeFetch(handler: Handler) {
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json" } });
 
-/** Vetor determinístico e não normalizado para o texto. */
+/** Deterministic, non-normalized vector for the text. */
 const vectorFor = (text: string) => [text.length, 1, 2];
 
 const embedHandler: Handler = (path, body) => {

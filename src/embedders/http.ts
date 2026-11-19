@@ -1,7 +1,7 @@
-// O que os clientes de API têm em comum: timeout, novas tentativas e tradução de erro HTTP.
+// What the API clients share: timeout, retries and translation of HTTP errors.
 import { EmbedError } from "../embed.js";
 
-/** Como o provedor aparece nas mensagens: "a OpenAI", "da OpenAI". */
+/** How the provider appears in messages: "a OpenAI", "da OpenAI". */
 export interface ProviderInfo {
   label: string;
   of: string;
@@ -13,11 +13,11 @@ export interface RequestOptions {
   fetch: typeof globalThis.fetch;
   sleep: (ms: number) => Promise<void>;
   timeoutMs: number;
-  /** Tentativas extras para 429 e 5xx. */
+  /** Extra attempts for 429 and 5xx. */
   retries: number;
-  /** Para a mensagem de modelo inexistente. */
+  /** For the unknown model message. */
   model: string;
-  /** Para nunca aparecer em mensagem de erro. */
+  /** So it never shows up in an error message. */
   apiKey: string;
 }
 
@@ -27,7 +27,7 @@ const MAX_WAIT_MS = 30_000;
 
 export const realSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-/** POST com JSON; devolve o corpo da resposta já interpretado. */
+/** POST with JSON; returns the parsed response body. */
 export async function postJson(
   info: ProviderInfo,
   url: string,
@@ -110,14 +110,14 @@ function unreachableMessage(info: ProviderInfo): string {
   return `não consegui falar com ${info.label} (${info.host}). Verifique a conexão`;
 }
 
-/** `retry-after` em segundos, com teto; sem ele, 1s, 2s, 4s... */
+/** `retry-after` in seconds, capped; without it, 1s, 2s, 4s... */
 function waitMs(response: Response, attempt: number): number {
   const header = Number(response.headers.get("retry-after"));
   if (Number.isFinite(header) && header > 0) return Math.min(header * 1000, MAX_WAIT_MS);
   return Math.min(1000 * 2 ** attempt, MAX_WAIT_MS);
 }
 
-/** A mensagem que o provedor mandou, nos formatos que eles usam. */
+/** The message the provider sent, in the formats they use. */
 function errorDetail(text: string): string {
   try {
     const data = JSON.parse(text) as {
@@ -133,7 +133,7 @@ function errorDetail(text: string): string {
     const found = candidates.find((c): c is string => typeof c === "string" && c !== "");
     if (found) return found;
   } catch {
-    // não é JSON: usa o texto cru
+    // not JSON: use the raw text
   }
   return text.slice(0, 200) || "(sem detalhe)";
 }

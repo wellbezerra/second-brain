@@ -5,12 +5,12 @@ import type { Embedder } from "./embed.js";
 const DIM = 64;
 
 /**
- * Embedder determinístico e sem rede, para testes. Cada palavra (sem caixa e
- * sem acento) soma 1 numa dimensão escolhida pelo SHA-256 dela. Não entende
- * significado, mas textos com palavras em comum ficam próximos.
+ * Deterministic, network-free embedder for tests. Each word (case- and
+ * accent-folded) adds 1 to a dimension chosen by its SHA-256. It does not
+ * understand meaning, but texts sharing words end up close.
  *
- * O algoritmo é fixado por um teste com vetor de referência: mudá-lo é
- * mudança deliberada.
+ * The algorithm is pinned by a test with a reference vector: changing it is
+ * a deliberate change.
  */
 export class HashEmbedder implements Embedder {
   readonly provider = "hash";

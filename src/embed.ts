@@ -1,21 +1,21 @@
-// Embeddings (ADR 012). O resto do projeto depende de `Embedder`, nunca de um provedor.
+// Embeddings (ADR 012). The rest of the project depends on `Embedder`, never on a provider.
 
-/** Documento é o que se indexa; consulta é o que se busca. Alguns provedores embeddam diferente. */
+/** A document is what gets indexed; a query is what gets searched. Some providers embed them differently. */
 export type EmbedPurpose = "document" | "query";
 
 export interface Embedder {
-  /** "openai", "gemini", "voyage", "ollama" ou "hash". */
+  /** "openai", "gemini", "voyage", "ollama" or "hash". */
   readonly provider: string;
   readonly model: string;
-  /** Para onde os textos vão, legível para o usuário. */
+  /** Where the texts are sent, readable by the user. */
   readonly endpoint: string;
-  /** Um vetor de norma 1 por texto, na ordem de entrada. */
+  /** One unit-norm vector per text, in input order. */
   embed(texts: readonly string[], purpose?: EmbedPurpose): Promise<number[][]>;
-  /** "" quando está tudo certo; senão, o problema em português. */
+  /** "" when everything is fine; otherwise, the problem in Portuguese. */
   health(): Promise<string>;
-  /** Dimensão, se já conhecida. */
+  /** Dimension, if already known. */
   readonly dim: number | undefined;
-  /** Dimensão, descobrindo-a com um embedding se preciso. */
+  /** Dimension, discovering it with an embedding if needed. */
   dimension(): Promise<number>;
 }
 
@@ -38,7 +38,7 @@ export class EmbedError extends Error {
   }
 }
 
-/** Divide pela norma. Vetor de norma zero passa sem alteração. */
+/** Divides by the norm. A zero-norm vector passes through unchanged. */
 export function normalize(vector: readonly number[]): number[] {
   let sum = 0;
   for (const x of vector) sum += x * x;
@@ -47,14 +47,14 @@ export function normalize(vector: readonly number[]): number[] {
 }
 
 /**
- * Lista não vazia de números finitos. `JSON.parse` lê `1e999` como Infinity,
- * e um vetor assim viraria NaN ao normalizar: é resposta defeituosa, não vetor.
+ * Non-empty list of finite numbers. `JSON.parse` reads `1e999` as Infinity,
+ * and such a vector would become NaN when normalized: it is a malformed response, not a vector.
  */
 export function isVector(value: unknown): value is number[] {
   return Array.isArray(value) && value.length > 0 && value.every((x) => Number.isFinite(x));
 }
 
-/** Garante que todos os vetores têm a mesma dimensão (e a esperada, se já conhecida). */
+/** Ensures all vectors have the same dimension (and the expected one, if already known). */
 export function checkDimension(vectors: readonly number[][], known: number | undefined, who: string): number {
   const dim = known ?? vectors[0]!.length;
   if (vectors.some((v) => v.length !== dim)) {

@@ -16,7 +16,7 @@ import {
 } from "./config.js";
 import type { Config, ProviderName } from "./config.js";
 
-/** O caminho do vault não existe; quem chama decide se pergunta e cria. */
+/** The vault path does not exist; the caller decides whether to ask and create it. */
 export class VaultNotFoundError extends Error {
   override name = "VaultNotFoundError";
   constructor(readonly path: string) {
@@ -29,20 +29,20 @@ export interface InitOptions {
   provider?: ProviderName | undefined;
   model?: string | undefined;
   git?: boolean | undefined;
-  /** Cria o diretório do vault se ele não existir. */
+  /** Creates the vault directory if it does not exist. */
   create?: boolean | undefined;
-  /** Arquivo de configuração; por padrão, `configPath()`. */
+  /** Configuration file; defaults to `configPath()`. */
   configFile?: string | undefined;
 }
 
 export interface InitResult {
   vault: string;
   configFile: string;
-  /** O diretório do vault foi criado agora. */
+  /** The vault directory was just created. */
   created: boolean;
-  /** `.brain/` foi acrescentado ao `.gitignore` agora. */
+  /** `.brain/` was just added to `.gitignore`. */
   gitignoreUpdated: boolean;
-  /** Problemas que não impediram o init. */
+  /** Problems that did not stop init. */
   warnings: string[];
 }
 
@@ -50,8 +50,8 @@ const BRAIN_DIR = ".brain";
 const GITIGNORE_ENTRIES = new Set([".brain", ".brain/", "/.brain", "/.brain/"]);
 
 /**
- * Prepara o vault: cria `.brain/`, protege o índice do Git e grava a
- * configuração. Pode ser rodado de novo sem desfazer nada.
+ * Prepares the vault: creates `.brain/`, keeps the index out of Git and writes the
+ * configuration. Can be run again without undoing anything.
  */
 export function initVault(options: InitOptions): InitResult {
   const vault = expandPath(options.vault);
@@ -85,7 +85,7 @@ export function initVault(options: InitOptions): InitResult {
   const remove: (keyof Config)[] = [];
   if (options.provider !== undefined) {
     values.provider = options.provider;
-    // Modelo antigo era de outro provedor: sem modelo novo, vale o padrão.
+    // The old model belonged to another provider: without a new model, the default applies.
     const previous = readConfigFile(configFile).provider ?? DEFAULTS.provider;
     if (options.model === undefined && previous !== options.provider) remove.push("model");
   }
@@ -96,7 +96,7 @@ export function initVault(options: InitOptions): InitResult {
   return { vault, configFile, created, gitignoreUpdated, warnings };
 }
 
-/** Garante a linha `.brain/` no `.gitignore`. Devolve se precisou escrever. */
+/** Ensures the `.brain/` line in `.gitignore`. Returns whether it had to write. */
 function ensureGitignore(file: string): boolean {
   const content = existsSync(file) ? readFileSync(file, "utf8") : "";
   const lines = content.split(/\r?\n/).map((line) => line.trim());

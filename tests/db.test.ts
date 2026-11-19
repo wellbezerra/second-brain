@@ -9,7 +9,7 @@ import { tempDir } from "./helpers.js";
 const embedder = new HashEmbedder();
 const IDENTITY: IndexIdentity = { provider: "hash", model: "hash-64", dim: 64 };
 
-/** `null` abre sem identidade (só leitura); omitido, usa a do HashEmbedder. */
+/** `null` opens without identity (read-only); omitted, uses the HashEmbedder one. */
 function open(identity: IndexIdentity | null = IDENTITY, path = join(tempDir(), ".brain", "index.db")) {
   return { index: BrainIndex.open(path, identity ?? undefined), path };
 }
@@ -31,7 +31,7 @@ async function addNote(index: BrainIndex, path: string, ...texts: string[]) {
   return id;
 }
 
-/** O invariante central: os mesmos ids nas três tabelas. */
+/** The core invariant: the same ids in the three tables. */
 function expectAligned(index: BrainIndex) {
   const ids = index.chunkIds();
   expect(ids.fts).toEqual(ids.chunks);
@@ -116,7 +116,7 @@ describe("identidade do índice: provedor, modelo e dimensão", () => {
     expect(index.identity()).toBeUndefined();
     expect(index.counts()).toEqual({ files: 0, chunks: 0, fts: 0, vec: 0 });
     index.close();
-    // Depois, a primeira indexação define a identidade.
+    // Then the first indexing sets the identity.
     const later = BrainIndex.open(path, IDENTITY);
     expect(later.identity()).toEqual(IDENTITY);
     later.close();

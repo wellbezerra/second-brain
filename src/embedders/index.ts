@@ -6,7 +6,7 @@ import { OllamaEmbedder } from "./ollama.js";
 import { OpenAIEmbedder } from "./openai.js";
 import { VoyageEmbedder } from "./voyage.js";
 
-/** Variável de ambiente com a chave de cada provedor; o Ollama não usa chave. */
+/** Environment variable holding each provider's key; Ollama uses no key. */
 export const API_KEY_VARS: Readonly<Record<ProviderName, string | undefined>> = Object.freeze({
   openai: "OPENAI_API_KEY",
   gemini: "GEMINI_API_KEY",
@@ -15,9 +15,9 @@ export const API_KEY_VARS: Readonly<Record<ProviderName, string | undefined>> = 
 });
 
 /**
- * Cria o cliente do provedor configurado. As chaves vêm só do ambiente
- * (ADR 012); sem chave, o cliente existe, mas recusa embeddar antes de
- * mandar qualquer texto.
+ * Creates the client for the configured provider. Keys come only from the environment
+ * (ADR 012); without a key, the client exists but refuses to embed before
+ * sending any text.
  */
 export function createEmbedder(
   settings: Pick<Settings, "provider" | "model" | "ollamaUrl">,
@@ -41,7 +41,7 @@ export function createEmbedder(
   }
 }
 
-/** Endereço base vindo do ambiente: precisa ser http(s), já que a chave vai junto. */
+/** Base URL from the environment: must be http(s), since the key is sent along. */
 function httpUrl(variable: string, value: string | undefined): string | undefined {
   if (value === undefined) return undefined;
   let protocol: string | undefined;

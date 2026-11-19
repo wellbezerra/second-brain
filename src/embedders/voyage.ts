@@ -6,7 +6,7 @@ import type { RemoteOptions } from "./remote.js";
 /** Chaves do MongoDB Atlas. Chaves da plataforma antiga usam https://api.voyageai.com/v1. */
 const BASE_URL = "https://ai.mongodb.com/v1";
 
-/** Voyage AI, o provedor que a Anthropic indica. `input_type` distingue consulta de documento. */
+/** Voyage AI, the provider Anthropic recommends. `input_type` distinguishes query from document. */
 export class VoyageEmbedder extends RemoteEmbedder {
   readonly provider = "voyage";
   private readonly baseUrl: string;

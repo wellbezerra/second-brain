@@ -1,16 +1,16 @@
-// Reconhecimento mínimo de Markdown, compartilhado por vault.ts e chunk.ts.
+// Minimal Markdown recognition, shared by vault.ts and chunk.ts.
 
 const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t]*$/;
 
 /**
- * Acompanha se a linha corrente está dentro de um bloco de código cercado.
- * Uma cerca só fecha com o mesmo caractere e pelo menos o mesmo comprimento.
+ * Tracks whether the current line is inside a fenced code block.
+ * A fence only closes with the same character and at least the same length.
  */
 export class FenceTracker {
   private open: string | undefined;
 
-  /** Consome uma linha; devolve true se ela pertence a um bloco de código (cercas incluídas). */
+  /** Consumes a line; returns true if it belongs to a code block (fences included). */
   feed(line: string): boolean {
     const match = FENCE_OPEN.exec(line);
     if (this.open === undefined) {
@@ -40,7 +40,7 @@ export interface Heading {
   text: string;
 }
 
-/** Interpreta uma linha como heading ATX (`# Título`). Não sabe de cercas: quem chama sabe. */
+/** Parses a line as an ATX heading (`# Title`). Unaware of fences: the caller handles them. */
 export function parseHeading(line: string): Heading | undefined {
   const match = HEADING.exec(line);
   if (!match) return undefined;

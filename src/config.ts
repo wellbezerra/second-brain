@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-/** Erro de configuração: a mensagem diz o que fazer, não só o que falhou. */
+/** Configuration error: the message says what to do, not only what failed. */
 export class ConfigError extends Error {
   override name = "ConfigError";
 }
@@ -10,7 +10,7 @@ export class ConfigError extends Error {
 export const PROVIDERS = ["openai", "gemini", "voyage", "ollama"] as const;
 export type ProviderName = (typeof PROVIDERS)[number];
 
-/** Modelo usado quando a configuração não diz qual (ADR 012). */
+/** Model used when the configuration does not name one (ADR 012). */
 export const DEFAULT_MODELS: Readonly<Record<ProviderName, string>> = Object.freeze({
   openai: "text-embedding-3-small",
   gemini: "gemini-embedding-2",
@@ -19,16 +19,16 @@ export const DEFAULT_MODELS: Readonly<Record<ProviderName, string>> = Object.fre
 });
 
 export interface Config {
-  /** Caminho absoluto do vault. */
+  /** Absolute path of the vault. */
   vault: string;
-  /** Provedor de embeddings (ADR 012). */
+  /** Embedding provider (ADR 012). */
   provider: ProviderName;
-  /** Modelo de embedding no provedor. */
+  /** Embedding model at the provider. */
   model: string;
   ollamaUrl: string;
-  /** Pastas ignoradas na varredura. */
+  /** Folders ignored by the scan. */
   excludes: string[];
-  /** Commit automático no vault (ADR 010). */
+  /** Automatic commit in the vault (ADR 010). */
   git: boolean;
 }
 
@@ -39,7 +39,7 @@ export const DEFAULTS: Readonly<Omit<Config, "vault" | "model">> = Object.freeze
   git: false,
 });
 
-/** O que pode vir da linha de comando. */
+/** What can come from the command line. */
 export interface ConfigArgs {
   vault?: string | undefined;
   provider?: string | undefined;
@@ -52,17 +52,17 @@ export type Env = Record<string, string | undefined>;
 export interface LoadOptions {
   args?: ConfigArgs;
   env?: Env;
-  /** Arquivo de configuração; por padrão, `configPath(env)`. */
+  /** Configuration file; defaults to `configPath(env)`. */
   file?: string;
 }
 
-/** `$XDG_CONFIG_HOME/brain/config.json`, ou `~/.config/brain/config.json`. */
+/** `$XDG_CONFIG_HOME/brain/config.json`, or `~/.config/brain/config.json`. */
 export function configPath(env: Env = process.env): string {
   const base = nonEmpty(env.XDG_CONFIG_HOME) ?? join(homedir(), ".config");
   return join(base, "brain", "config.json");
 }
 
-/** Expande `~` e resolve para caminho absoluto. */
+/** Expands `~` and resolves to an absolute path. */
 export function expandPath(path: string): string {
   if (path === "~") return homedir();
   if (path.startsWith("~/") || path.startsWith("~\\")) {
@@ -71,7 +71,7 @@ export function expandPath(path: string): string {
   return resolve(path);
 }
 
-/** Configuração em que o vault pode faltar — para quem diagnostica, como o `brain doctor`. */
+/** Configuration where the vault may be missing, for diagnostics such as `brain doctor`. */
 export type Settings = Omit<Config, "vault"> & { vault?: string };
 
 export const MISSING_VAULT_MESSAGE =
@@ -81,8 +81,8 @@ export const MISSING_VAULT_MESSAGE =
   "  - defina a variável de ambiente BRAIN_VAULT.";
 
 /**
- * Carrega a configuração. Precedência: argumento > ambiente > arquivo > padrão.
- * Lança `ConfigError` se o arquivo for inválido ou se não houver vault.
+ * Loads the configuration. Precedence: argument > environment > file > default.
+ * Throws `ConfigError` if the file is invalid or there is no vault.
  */
 export function loadConfig(options: LoadOptions = {}): Config {
   const settings = loadSettings(options);
@@ -90,7 +90,7 @@ export function loadConfig(options: LoadOptions = {}): Config {
   return { ...settings, vault: settings.vault };
 }
 
-/** Como `loadConfig`, mas sem exigir vault. */
+/** Like `loadConfig`, but without requiring a vault. */
 export function loadSettings(options: LoadOptions = {}): Settings {
   const args = options.args ?? {};
   const env = options.env ?? process.env;
@@ -104,8 +104,8 @@ export function loadSettings(options: LoadOptions = {}): Settings {
     parseProvider(nonEmpty(args.provider) ?? nonEmpty(env.BRAIN_PROVIDER)) ??
     stored.provider ??
     DEFAULTS.provider;
-  // O modelo do arquivo pertence ao provedor do arquivo: trocar de provedor
-  // por argumento ou ambiente não arrasta um modelo que ele não conhece.
+  // The file's model belongs to the file's provider: switching provider
+  // through an argument or the environment does not carry over a model it does not know.
   const storedModel =
     (stored.provider ?? DEFAULTS.provider) === provider ? stored.model : undefined;
 
@@ -127,7 +127,7 @@ export function loadSettings(options: LoadOptions = {}): Settings {
   };
 }
 
-/** Lê o arquivo de configuração. Arquivo ausente devolve `{}`. */
+/** Reads the configuration file. A missing file returns `{}`. */
 export function readConfigFile(file: string): Partial<Config> {
   if (!existsSync(file)) return {};
 
@@ -185,8 +185,8 @@ export function readConfigFile(file: string): Partial<Config> {
 }
 
 /**
- * Grava campos na configuração, preservando os que já estavam lá, exceto os
- * listados em `remove`. Chave de API nunca passa por aqui (ADR 012).
+ * Writes fields to the configuration, keeping the existing ones except those
+ * listed in `remove`. API keys never go through here (ADR 012).
  */
 export function saveConfig(
   values: Partial<Config>,
@@ -207,7 +207,7 @@ export function saveConfig(
   writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
 }
 
-/** Valida um provedor vindo de argumento ou ambiente. */
+/** Validates a provider coming from an argument or the environment. */
 export function parseProvider(value: string | undefined): ProviderName | undefined {
   if (value === undefined) return undefined;
   const normalized = value.trim().toLowerCase();

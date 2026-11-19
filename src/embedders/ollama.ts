@@ -4,7 +4,7 @@ import type { EmbedPurpose, Embedder } from "../embed.js";
 export interface OllamaOptions {
   url: string;
   model: string;
-  /** Injetável para teste. */
+  /** Injectable for tests. */
   fetch?: typeof globalThis.fetch;
   batchSize?: number;
   timeoutMs?: number;
@@ -13,7 +13,7 @@ export interface OllamaOptions {
 const BATCH_SIZE = 32;
 const TIMEOUT_MS = 120_000;
 
-/** Ollama local (ADR 003, mantido como opção pelo ADR 012). Não distingue consulta de documento. */
+/** Local Ollama (ADR 003, kept as an option by ADR 012). Does not distinguish query from document. */
 export class OllamaEmbedder implements Embedder {
   readonly provider = "ollama";
   readonly url: string;
@@ -66,7 +66,7 @@ export class OllamaEmbedder implements Embedder {
     }
   }
 
-  /** Modelos baixados no Ollama (`GET /api/tags`). */
+  /** Models pulled in Ollama (`GET /api/tags`). */
   async listModels(): Promise<string[]> {
     const response = await this.request("/api/tags");
     if (!response.ok) throw this.httpError(response.status, await response.text());
@@ -85,7 +85,7 @@ export class OllamaEmbedder implements Embedder {
     if (response.status === 404) {
       const body = await response.text();
       if (isModelMissing(body)) throw this.modelMissing();
-      // Ollama antigo: não existe /api/embed.
+      // Old Ollama: /api/embed does not exist.
       this.legacy = true;
       return this.embedLegacy(batch);
     }
@@ -162,7 +162,7 @@ export class OllamaEmbedder implements Embedder {
   }
 }
 
-/** Corpo de uma resposta 2xx; o que não for JSON (um proxy, uma página de erro) é resposta defeituosa. */
+/** Body of a 2xx response; anything that is not JSON (a proxy, an error page) is a malformed response. */
 async function readJson(response: Response): Promise<unknown> {
   try {
     return await response.json();

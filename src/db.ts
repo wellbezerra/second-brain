@@ -1,5 +1,5 @@
-// O índice (ADR 004, ADR 007): um SQLite com manifesto, FTS5 e sqlite-vec.
-// Invariante central: chunks.id = chunks_fts.rowid = chunks_vec.chunk_id.
+// The index (ADR 004, ADR 007): a SQLite database with manifest, FTS5 and sqlite-vec.
+// Core invariant: chunks.id = chunks_fts.rowid = chunks_vec.chunk_id.
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
@@ -25,7 +25,7 @@ export class IndexError extends Error {
   }
 }
 
-/** Quem gerou os vetores. Vetores de identidades diferentes não se comparam (ADR 012). */
+/** Who produced the vectors. Vectors from different identities are not comparable (ADR 012). */
 export interface IndexIdentity {
   provider: string;
   model: string;
@@ -33,11 +33,11 @@ export interface IndexIdentity {
 }
 
 export interface FileInput {
-  /** Relativo à raiz do vault, com `/`. */
+  /** Relative to the vault root, with `/`. */
   path: string;
-  /** SHA-256 do conteúdo. */
+  /** SHA-256 of the content. */
   hash: string;
-  /** Milissegundos desde a época, como `stat.mtimeMs`. */
+  /** Milliseconds since the epoch, like `stat.mtimeMs`. */
   mtime: number;
   size: number;
   title: string | null;
@@ -45,7 +45,7 @@ export interface FileInput {
 
 export interface FileRow extends FileInput {
   id: number;
-  /** Milissegundos desde a época. */
+  /** Milliseconds since the epoch. */
   indexedAt: number;
 }
 
@@ -103,9 +103,9 @@ export class BrainIndex {
   ) {}
 
   /**
-   * Abre (criando se preciso) e migra o índice. Com `identity`, grava-a na
-   * primeira vez e cria a tabela vetorial; nas seguintes, recusa uma
-   * identidade diferente. Sem `identity`, abre só para ler.
+   * Opens (creating if needed) and migrates the index. With `identity`, stores it
+   * the first time and creates the vector table; afterwards, rejects a
+   * different identity. Without `identity`, opens read-only.
    */
   static open(path: string, identity?: IndexIdentity): BrainIndex {
     mkdirSync(dirname(path), { recursive: true });
@@ -139,7 +139,7 @@ export class BrainIndex {
     return this.db.pragma(name, { simple: true });
   }
 
-  /** Identidade gravada, ou `undefined` se ainda não houve indexação. */
+  /** Stored identity, or `undefined` if nothing has been indexed yet. */
   identity(): IndexIdentity | undefined {
     const provider = this.meta("provider");
     const model = this.meta("model");
@@ -161,12 +161,12 @@ export class BrainIndex {
       .run(key, value);
   }
 
-  /** Roda `fn` numa transação; aninhada, vira savepoint. */
+  /** Runs `fn` in a transaction; when nested, it becomes a savepoint. */
   transaction<T>(fn: () => T): T {
     return this.db.transaction(fn)();
   }
 
-  /** Mapa caminho → linha do manifesto, para comparar com o disco. */
+  /** Map of path to manifest row, to compare against the disk. */
   manifest(): Map<string, FileRow> {
     const rows = this.db
       .prepare("SELECT id, path, hash, mtime, size, title, indexed_at AS indexedAt FROM files")
@@ -175,8 +175,8 @@ export class BrainIndex {
   }
 
   /**
-   * Grava a nota no manifesto e apaga os trechos antigos dela, numa
-   * operação só: não existe janela com manifesto novo e trechos velhos.
+   * Writes the note to the manifest and deletes its old chunks in a single
+   * operation: there is no window with a new manifest and stale chunks.
    */
   upsertFile(file: FileInput): number {
     return this.transaction(() => {
@@ -195,7 +195,7 @@ export class BrainIndex {
     });
   }
 
-  /** Insere trechos e vetores nas três tabelas, com o mesmo id. Valida tudo antes de escrever. */
+  /** Inserts chunks and vectors into the three tables, with the same id. Validates everything before writing. */
   insertChunks(fileId: number, chunks: readonly ChunkInput[], embeddings: readonly number[][]): void {
     const identity = this.identity();
     if (!identity || !this.hasVecTable()) {
@@ -217,7 +217,7 @@ export class BrainIndex {
         `vetor de dimensão ${wrong.length}, mas o índice é de ${identity.dim}`,
       );
     }
-    // NaN ou Infinity no vec0 envenenam toda distância calculada contra eles.
+    // NaN or Infinity in vec0 poisons every distance computed against them.
     if (embeddings.some((v) => !v.every(Number.isFinite))) {
       throw new IndexError("invalid-input", "vetor com valor não finito (NaN ou Infinity)");
     }
@@ -232,13 +232,13 @@ export class BrainIndex {
       chunks.forEach((chunk, i) => {
         const { id } = insertChunk.get(fileId, chunk.ord, chunk.heading, chunk.text) as { id: number };
         insertFts.run(id, chunk.text, chunk.heading ?? "");
-        // vec0 exige inteiro de verdade na chave; número do JS chega como REAL.
+        // vec0 requires a real integer key; a JS number arrives as REAL.
         insertVec.run(BigInt(id), new Float32Array(embeddings[i]!));
       });
     });
   }
 
-  /** Apaga a nota e tudo derivado dela. */
+  /** Deletes the note and everything derived from it. */
   dropFile(fileId: number): void {
     this.transaction(() => {
       this.deleteChunksOf(fileId);
@@ -257,7 +257,7 @@ export class BrainIndex {
     };
   }
 
-  /** Ids de cada tabela, em ordem — o que o `reconcile` (spec 08) compara. */
+  /** Ids of each table, in order: what `reconcile` (spec 08) compares. */
   chunkIds(): { chunks: number[]; fts: number[]; vec: number[] } {
     const ids = (sql: string) =>
       (this.db.prepare(sql).raw().all() as [number | bigint][]).map(([id]) => Number(id));
@@ -275,7 +275,7 @@ export class BrainIndex {
     return row?.text;
   }
 
-  /** Ids que casam com uma expressão FTS5, por relevância. Base da busca da spec 06. */
+  /** Ids matching an FTS5 expression, by relevance. Basis of the spec 06 search. */
   matchText(query: string): number[] {
     return (
       this.db
@@ -285,7 +285,7 @@ export class BrainIndex {
     ).map(([id]) => id);
   }
 
-  /** Os `k` trechos mais próximos do vetor. Base da busca da spec 06. */
+  /** The `k` chunks closest to the vector. Basis of the spec 06 search. */
   nearest(vector: readonly number[], k: number): { chunkId: number; distance: number }[] {
     if (!this.hasVecTable()) return [];
     const rows = this.db
@@ -313,7 +313,7 @@ export class BrainIndex {
           `(esquema ${stored}; esta entende até ${SCHEMA_VERSION}). Atualize o Brain ou rode \`brain index --rebuild\`.`,
       );
     }
-    // Esquema 1 é o primeiro: ainda não há migração a aplicar.
+    // Schema 1 is the first one: there is no migration to apply yet.
   }
 
   private bind(identity: IndexIdentity): void {
@@ -336,7 +336,7 @@ export class BrainIndex {
       this.setMeta("provider", identity.provider);
       this.setMeta("model", identity.model);
       this.setMeta("dim", String(identity.dim));
-      // Vetores saem normalizados do embedder: distância L2 ordena como o cosseno (ADR 003/012).
+      // Vectors come normalized from the embedder: L2 distance ranks like cosine (ADR 003/012).
       this.db.exec(
         `CREATE VIRTUAL TABLE IF NOT EXISTS chunks_vec USING vec0(
            chunk_id  INTEGER PRIMARY KEY,
@@ -371,7 +371,7 @@ function describe(identity: IndexIdentity): string {
   return `${identity.provider} · ${identity.model} (${identity.dim} dimensões)`;
 }
 
-/** O SQLite recusou o arquivo por não ser um banco, ou por estar danificado. */
+/** SQLite rejected the file because it is not a database, or because it is damaged. */
 function isCorruption(error: unknown): boolean {
   const code = (error as { code?: unknown } | null)?.code;
   return code === "SQLITE_NOTADB" || code === "SQLITE_CORRUPT";
@@ -379,8 +379,8 @@ function isCorruption(error: unknown): boolean {
 
 function loadVec(db: Database.Database): void {
   try {
-    // better-sqlite3 só expõe a carga pela API em C: load_extension() em SQL
-    // continua desligado, então não há o que desabilitar depois.
+    // better-sqlite3 only exposes loading through the C API: load_extension() in SQL
+    // stays disabled, so there is nothing to disable afterwards.
     sqliteVec.load(db);
   } catch (error) {
     throw new IndexError(
@@ -397,7 +397,7 @@ export interface SqliteInfo {
   vec: { version: string } | { error: string };
 }
 
-/** Diagnóstico do SQLite embutido, num banco em memória. Para o `brain doctor`. */
+/** Diagnostics of the bundled SQLite, on an in-memory database. For `brain doctor`. */
 export function sqliteInfo(): SqliteInfo {
   const db = new Database(":memory:");
   try {

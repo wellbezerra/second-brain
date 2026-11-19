@@ -19,18 +19,18 @@ export interface DoctorInput {
   nodeVersion: string;
   settings: Settings;
   embedder: Embedder;
-  /** Injetável para teste; por padrão, o SQLite de verdade. */
+  /** Injectable for tests; defaults to the real SQLite. */
   sqlite?: () => SqliteInfo;
 }
 
 const MIN_NODE_MAJOR = 24;
 
 /**
- * Verifica, em ordem, os pré-requisitos externos. Um item que depende de
- * outro que falhou é pulado, não marcado como falho.
+ * Checks the external prerequisites in order. An item that depends on
+ * one that failed is skipped, not marked as failed.
  *
- * Para provedores remotos, verificar custa um embedding de uma palavra: é o
- * único jeito de saber se a chave e o modelo funcionam (ADR 012).
+ * For remote providers, checking costs a one-word embedding: it is the
+ * only way to know whether the key and the model work (ADR 012).
  */
 export async function runDoctor(input: DoctorInput): Promise<Check[]> {
   const { settings, embedder } = input;

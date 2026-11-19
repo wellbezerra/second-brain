@@ -1,5 +1,5 @@
-// Quebra de nota em trechos guiada por headings (ADR 008).
-// As constantes não são configuração: mudá-las invalida a comparação entre índices.
+// Heading-driven splitting of a note into chunks (ADR 008).
+// The constants are not configuration: changing them breaks comparison between indexes.
 import { FenceTracker, parseHeading } from "./markdown.js";
 
 export const TARGET_CHARS = 1200;
@@ -7,14 +7,14 @@ export const OVERLAP_CHARS = 150;
 export const MIN_CHARS = 60;
 
 export interface Chunk {
-  /** Caminho `título > h1 > h2 > ...`. */
+  /** Path `title > h1 > h2 > ...`. */
   heading: string;
   text: string;
-  /** Posição do trecho na nota, a partir de 0. */
+  /** Position of the chunk in the note, starting at 0. */
   ordinal: number;
 }
 
-/** Texto enviado ao modelo de embedding. */
+/** Text sent to the embedding model. */
 export function embeddingText(chunk: Chunk): string {
   return `${chunk.heading}\n\n${chunk.text}`;
 }
@@ -26,7 +26,7 @@ export function chunkNote(note: { title: string; body: string }): Chunk[] {
       raw.push({ heading: section.heading, text });
     }
   }
-  // Trecho curto é ruído — a menos que a nota inteira seja curta.
+  // A short chunk is noise, unless the whole note is short.
   const kept = raw.filter((c) => c.text.length >= MIN_CHARS);
   return (kept.length > 0 ? kept : raw).map((c, ordinal) => ({ ...c, ordinal }));
 }
@@ -75,7 +75,7 @@ function headingPath(title: string, stack: readonly (string | undefined)[]): str
   return [title, ...levels].join(" > ");
 }
 
-/** Um pedaço indivisível já repartido, com o separador que o liga ao anterior. */
+/** An indivisible, already split piece, with the separator that joins it to the previous one. */
 interface Piece {
   text: string;
   sep: string;
@@ -87,7 +87,7 @@ function splitSection(lines: Line[]): string[] {
 
   const pieces: Piece[] = [];
   for (const paragraph of paragraphs(lines)) {
-    // Sentença só quando o parágrafo sozinho estoura o alvo; código nunca.
+    // Split by sentence only when the paragraph alone exceeds the target; never code.
     const parts: Piece[] =
       paragraph.code || paragraph.text.length <= TARGET_CHARS
         ? [{ text: paragraph.text, sep: "\n" }]
@@ -103,7 +103,7 @@ function splitSection(lines: Line[]): string[] {
   return pack(pieces);
 }
 
-/** Parágrafos separados por linha em branco; um bloco de código é um parágrafo só. */
+/** Paragraphs separated by a blank line; a code block is a single paragraph. */
 function paragraphs(lines: Line[]): { text: string; code: boolean }[] {
   const out: { text: string; code: boolean }[] = [];
   let current: Line[] = [];
@@ -115,7 +115,7 @@ function paragraphs(lines: Line[]): { text: string; code: boolean }[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
     const prev = lines[i - 1];
-    // Entrar ou sair de um bloco de código também fecha o parágrafo.
+    // Entering or leaving a code block also closes the paragraph.
     if (prev && prev.code !== line.code && current.length > 0) flush();
     if (!line.code && line.text.trim() === "") flush();
     else current.push(line);
@@ -124,7 +124,7 @@ function paragraphs(lines: Line[]): { text: string; code: boolean }[] {
   return out;
 }
 
-/** Sentenças de um parágrafo, cada uma com o separador que a precede. */
+/** Sentences of a paragraph, each with the separator that precedes it. */
 function sentences(text: string): Piece[] {
   const parts = text.split(/(?<=[.!?…]["')\]]*)(\s+)/);
   const out: Piece[] = [];
@@ -137,7 +137,7 @@ function sentences(text: string): Piece[] {
   return out;
 }
 
-/** Último recurso: corta no espaço (de preferência quebra de linha) mais próximo do alvo. */
+/** Last resort: cut at the whitespace (preferably a line break) closest to the target. */
 function hardSplit(text: string): Piece[] {
   const out: Piece[] = [];
   let rest = text;
@@ -160,7 +160,7 @@ function hardSplit(text: string): Piece[] {
   return out;
 }
 
-/** Junta pedaços em trechos de até TARGET_CHARS, cada um começando com a cauda do anterior. */
+/** Joins pieces into chunks of up to TARGET_CHARS, each starting with the tail of the previous one. */
 function pack(pieces: Piece[]): string[] {
   const chunks: string[] = [];
   let current = "";
@@ -180,7 +180,7 @@ function pack(pieces: Piece[]): string[] {
   return chunks;
 }
 
-/** Até `size` caracteres do fim de `text`, começando no início de uma palavra. */
+/** Up to `size` characters from the end of `text`, starting at the beginning of a word. */
 function overlapTail(text: string, size: number): string {
   if (size <= 0) return "";
   if (text.length <= size) return text;

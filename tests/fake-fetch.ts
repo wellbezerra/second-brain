@@ -6,7 +6,7 @@ export interface Call {
 
 export type Handler = (call: Call, index: number) => Response | Promise<Response>;
 
-/** fetch falso: registra cada chamada e responde com o handler. Nunca toca a rede. */
+/** Fake fetch: records each call and answers with the handler. Never touches the network. */
 export function fakeFetch(handler: Handler) {
   const calls: Call[] = [];
   const fetch = async (input: string | URL | Request, init?: RequestInit) => {
@@ -37,5 +37,5 @@ export const networkDown = () => {
   });
 };
 
-/** Vetor determinístico e não normalizado para um texto. */
+/** Deterministic, non-normalized vector for a text. */
 export const vectorFor = (text: string) => [text.length, 1, 2];

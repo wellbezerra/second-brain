@@ -5,7 +5,7 @@ import { afterEach } from "vitest";
 
 const created: string[] = [];
 
-/** Diretório temporário removido ao fim de cada teste. */
+/** Temporary directory removed at the end of each test. */
 export function tempDir(prefix = "brain-test-"): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   created.push(dir);

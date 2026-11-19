@@ -52,7 +52,7 @@ describe("scanVault", () => {
     const root = tempDir();
     mkdirSync(join(root, "real"));
     writeFileSync(join(root, "real", "nota.md"), "nota");
-    // "junction" no Windows não exige permissão; nos outros sistemas é ignorado.
+    // "junction" on Windows needs no permission; other systems ignore it.
     symlinkSync(join(root, "real"), join(root, "atalho"), "junction");
     expect(scanVault(root, EXCLUDES).files).toEqual(["real/nota.md"]);
   });
@@ -63,7 +63,7 @@ describe("scanVault", () => {
     try {
       symlinkSync(join(root, "nota.md"), join(root, "link.md"), "file");
     } catch {
-      ctx.skip(); // Windows sem modo desenvolvedor não cria link de arquivo
+      ctx.skip(); // Windows without developer mode cannot create file links
     }
     expect(scanVault(root, EXCLUDES).files).toEqual(["nota.md"]);
   });

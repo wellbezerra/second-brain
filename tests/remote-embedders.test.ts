@@ -10,7 +10,7 @@ import type { Call, Handler } from "./fake-fetch.js";
 const KEY = "sk-segredo-1234567890";
 const noSleep = async () => {};
 
-/** O que muda de um provedor para outro, para rodar os mesmos testes nos três. */
+/** What changes from one provider to another, to run the same tests on all three. */
 interface Provider {
   name: string;
   label: string;
@@ -18,13 +18,13 @@ interface Provider {
   host: string;
   defaultModel: string;
   make(options: { apiKey: string | undefined; fetch: typeof globalThis.fetch; model?: string }): Embedder;
-  /** Textos enviados numa chamada, já sem prefixos. */
+  /** Texts sent in a call, with prefixes stripped. */
   inputs(call: Call): string[];
-  /** Resposta de sucesso para os textos de uma chamada. */
+  /** Success response for the texts of a call. */
   ok(call: Call): Response;
-  /** Resposta de erro no formato do provedor. */
+  /** Error response in the provider's format. */
   error(status: number, message: string): Response;
-  /** Cabeçalho onde a chave vai. */
+  /** Header that carries the key. */
   keyHeader(call: Call): string | undefined;
 }
 
@@ -39,7 +39,7 @@ const openai: Provider = {
   inputs: (call) => call.body!.input as string[],
   ok: (call) => {
     const input = call.body!.input as string[];
-    // A OpenAI devolve com `index`; a ordem da lista não é garantida.
+    // OpenAI returns items with `index`; list order is not guaranteed.
     const data = input.map((t, index) => ({ object: "embedding", index, embedding: vectorFor(t) }));
     return json({ object: "list", data: data.reverse(), model: call.body!.model });
   },
@@ -206,7 +206,7 @@ describe.each([openai, gemini, voyage])("$name", (p) => {
 
   it("número que estoura o float (1e999 vira Infinity) é erro, não vetor", async () => {
     const { embedder } = setup(async (call) => {
-      // Troca o primeiro número de um vetor por 1e999, que JSON.parse lê como Infinity.
+      // Replaces the first number of a vector with 1e999, which JSON.parse reads as Infinity.
       const body = (await p.ok(call).text()).replace(/:\[\d+/, ":[1e999");
       return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
     });

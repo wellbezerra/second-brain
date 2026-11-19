@@ -10,7 +10,7 @@ import { HashEmbedder } from "../src/hash-embedder.js";
 import { fakeFetch, json, networkDown } from "./fake-fetch.js";
 import { tempDir } from "./helpers.js";
 
-/** Ollama falso: `up` controla se responde, `models` o que está baixado. */
+/** Fake Ollama: `up` controls whether it answers, `models` what is pulled. */
 function ollama(options: { up: boolean; models?: string[]; dim?: number }) {
   const { fetch } = fakeFetch((call) => {
     if (!options.up) networkDown();
@@ -52,7 +52,7 @@ describe("runDoctor", () => {
     expect(provider).toContain("text-embedding-3-small");
     expect(provider).toContain("api.openai.com");
     expect(checks.find((c) => c.name === "dimensão")!.detail).toContain("1536");
-    // health já descobre a dimensão: uma chamada só.
+    // health already discovers the dimension: a single call.
     expect(calls).toHaveLength(1);
   });
 

@@ -78,7 +78,7 @@ describe("chunkNote com o vault de exemplo", () => {
       const previousTail = chunks[i - 1]!.text.slice(-40);
       expect(chunks[i]!.text).toContain(previousTail);
     }
-    // Parágrafos que cabem no alvo não são cortados: todo trecho termina num fim de parágrafo.
+    // Paragraphs that fit the target are not cut: every chunk ends at a paragraph end.
     const paragraphEnds = readNote(FIXTURE, "longa.md")
       .body.split("\n\n")
       .map((p) => p.trim().slice(-30));
