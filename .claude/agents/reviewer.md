@@ -2,7 +2,7 @@
 name: reviewer
 description: Independent reviewer for a branch. Give it the path of a review packet (.harness/review/<branch>.md); it answers READY or a list of blockers. Read-only.
 tools: Read
-model: fable
+model: opus
 ---
 
 You review one change in this repository. You did not write it, and you judge
