@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ConfigError,
   DEFAULTS,
+  DEFAULT_MODELS,
   configPath,
   loadConfig,
   loadSettings,
@@ -84,8 +85,14 @@ describe("loadConfig", () => {
       env: {},
       file: join(dir, "nao-existe.json"),
     });
-    expect(config).toEqual({ ...DEFAULTS, vault: resolve(dir) });
-    expect(DEFAULTS.model).toBe("bge-m3");
+    expect(config).toEqual({ ...DEFAULTS, model: "text-embedding-3-small", vault: resolve(dir) });
+    expect(DEFAULTS.provider).toBe("openai");
+    expect(DEFAULT_MODELS).toEqual({
+      openai: "text-embedding-3-small",
+      gemini: "gemini-embedding-2",
+      voyage: "voyage-4",
+      ollama: "bge-m3",
+    });
     expect(DEFAULTS.ollamaUrl).toBe("http://127.0.0.1:11434");
     expect(DEFAULTS.excludes).toEqual([
       ".obsidian",
@@ -139,6 +146,56 @@ describe("loadConfig", () => {
         file: join(dir, "nao-existe.json"),
       }),
     ).toThrow(ConfigError);
+  });
+});
+
+describe("provedor", () => {
+  const file = () => join(tempDir(), "config.json");
+
+  it("argumento vence ambiente, que vence arquivo, que vence o padrão", () => {
+    const f = file();
+    writeConfig(f, { vault: "/v", provider: "voyage" });
+    expect(loadConfig({ env: {}, file: f }).provider).toBe("voyage");
+    expect(loadConfig({ env: { BRAIN_PROVIDER: "gemini" }, file: f }).provider).toBe("gemini");
+    expect(
+      loadConfig({ args: { provider: "ollama" }, env: { BRAIN_PROVIDER: "gemini" }, file: f }).provider,
+    ).toBe("ollama");
+    expect(loadConfig({ args: { vault: "/v" }, env: {}, file: file() }).provider).toBe("openai");
+  });
+
+  it("sem modelo, vale o padrão do provedor", () => {
+    const config = loadConfig({ args: { vault: "/v", provider: "gemini" }, env: {}, file: file() });
+    expect(config.model).toBe("gemini-embedding-2");
+  });
+
+  it("modelo do arquivo só vale para o provedor do arquivo", () => {
+    const f = file();
+    writeConfig(f, { vault: "/v", provider: "ollama", model: "nomic-embed-text" });
+    expect(loadConfig({ env: {}, file: f }).model).toBe("nomic-embed-text");
+    // Trocar de provedor pelo ambiente não arrasta o modelo do Ollama para a OpenAI.
+    expect(loadConfig({ env: { BRAIN_PROVIDER: "openai" }, file: f }).model).toBe("text-embedding-3-small");
+    // Modelo explícito sempre vence.
+    expect(
+      loadConfig({ args: { model: "text-embedding-3-large" }, env: { BRAIN_PROVIDER: "openai" }, file: f }).model,
+    ).toBe("text-embedding-3-large");
+  });
+
+  it("provedor desconhecido é ConfigError que lista as opções", () => {
+    const load = () => loadConfig({ args: { vault: "/v", provider: "claude" }, env: {}, file: file() });
+    expect(load).toThrow(ConfigError);
+    expect(load).toThrow(/openai, gemini, voyage ou ollama/);
+  });
+
+  it("provedor desconhecido no arquivo nomeia o arquivo", () => {
+    const f = file();
+    writeConfig(f, { vault: "/v", provider: "claude" });
+    expect(() => loadConfig({ env: {}, file: f })).toThrow(f);
+  });
+
+  it("nunca lê chave de API do arquivo", () => {
+    const f = file();
+    writeConfig(f, { vault: "/v", openai_api_key: "sk-no-arquivo" });
+    expect(JSON.stringify(loadConfig({ env: {}, file: f }))).not.toContain("sk-no-arquivo");
   });
 });
 

@@ -7,6 +7,8 @@ describe("HashEmbedder", () => {
   const embedder = new HashEmbedder();
 
   it("tem dimensão 64 e saúde sempre boa", async () => {
+    expect(embedder.provider).toBe("hash");
+    expect(embedder.endpoint).toBe("local");
     expect(embedder.dim).toBe(64);
     expect(await embedder.dimension()).toBe(64);
     expect(await embedder.health()).toBe("");

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EmbedError, OllamaEmbedder, normalize } from "../src/embed.js";
+import { EmbedError, normalize } from "../src/embed.js";
+import { OllamaEmbedder } from "../src/embedders/ollama.js";
 
 interface Call {
   path: string;
@@ -56,6 +57,19 @@ describe("normalize", () => {
 });
 
 describe("OllamaEmbedder", () => {
+  it("identifica provedor, modelo e destino", () => {
+    const { embedder } = client(embedHandler);
+    expect(embedder.provider).toBe("ollama");
+    expect(embedder.model).toBe("bge-m3");
+    expect(embedder.endpoint).toBe("http://127.0.0.1:11434 (local)");
+  });
+
+  it("ignora o propósito", async () => {
+    const { embedder, calls } = client(embedHandler);
+    await embedder.embed(["a"], "query");
+    expect(calls[0]!.body).toEqual({ model: "bge-m3", input: ["a"] });
+  });
+
   it("embed([]) devolve [] sem chamar a rede", async () => {
     const { embedder, calls } = client(embedHandler);
     expect(await embedder.embed([])).toEqual([]);
