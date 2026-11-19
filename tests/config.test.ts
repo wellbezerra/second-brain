@@ -7,6 +7,7 @@ import {
   DEFAULTS,
   configPath,
   loadConfig,
+  loadSettings,
   saveConfig,
 } from "../src/config.js";
 import { tempDir } from "./helpers.js";
@@ -138,6 +139,24 @@ describe("loadConfig", () => {
         file: join(dir, "nao-existe.json"),
       }),
     ).toThrow(ConfigError);
+  });
+});
+
+describe("loadSettings", () => {
+  it("não exige vault, e aplica a mesma precedência", () => {
+    const dir = tempDir();
+    const file = join(dir, "config.json");
+    writeConfig(file, { model: "modelo-arquivo" });
+    const settings = loadSettings({ env: { BRAIN_OLLAMA_URL: "http://x:1" }, file });
+    expect(settings.vault).toBeUndefined();
+    expect(settings.model).toBe("modelo-arquivo");
+    expect(settings.ollamaUrl).toBe("http://x:1");
+  });
+
+  it("resolve o vault quando ele existe", () => {
+    const dir = tempDir();
+    const settings = loadSettings({ args: { vault: "~/x" }, env: {}, file: join(dir, "n.json") });
+    expect(settings.vault).toBe(join(homedir(), "x"));
   });
 });
 
