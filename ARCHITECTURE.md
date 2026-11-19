@@ -49,15 +49,6 @@ top, as a thin shell.
 
 ## Repository
 
-```
-src/
-  cli.ts        entry point of the `brain` command; parsing, printing, exit codes
-  config.ts     configuration loading (argument > environment > file > default)
-  init.ts       writes Brain's own configuration (`brain init`); never the vault
-  version.ts    version read from package.json
-tests/          Vitest; no test requires Ollama
-docs/           SPEC, ADRs, specs and roadmap
-```
-
-The vault, embeddings, index, search and reconciliation modules arrive one per
-commit, following the roadmap.
+The current module map is in [CLAUDE.md](CLAUDE.md). Configuration, vault,
+embeddings, index, search and reconciliation modules arrive one feature at a
+time, following the roadmap.
