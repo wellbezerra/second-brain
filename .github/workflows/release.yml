@@ -1,9 +1,10 @@
 name: Release
 
-# Every merge into main creates a new GitHub Release (semver, auto-bumped).
-#   breaking label or "!" in the PR title -> major
-#   feature label  or "feat" title        -> minor
-#   anything else                         -> patch
+# Every merge into main (a release PR from develop) creates a new GitHub Release
+# (semver, auto-bumped from the release PR and every commit since the last tag).
+#   breaking label, "!" in a title/subject or BREAKING CHANGE -> major
+#   feature label or any feat commit                          -> minor
+#   anything else                                             -> patch
 on:
   push:
     branches: [main]
@@ -45,17 +46,25 @@ jobs:
           PR_TITLE=$(echo "$PR_JSON" | jq -r '.title // empty')
           PR_LABELS=$(echo "$PR_JSON" | jq -r '[.labels[].name] | join(",")')
 
+          # Latest version tag
+          LAST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+
+          # Commits shipped by this release: everything since the last tag
+          if [[ -n "$LAST" ]]; then RANGE="$LAST..$SHA"; else RANGE="$SHA"; fi
+          SUBJECTS=$(git log --no-merges --format=%s "$RANGE")
+          BODIES=$(git log --no-merges --format=%b "$RANGE")
+          LAST=${LAST:-v0.0.0}
+
           # Bump type
           BUMP=patch
-          if [[ "$PR_LABELS" == *breaking* || "$PR_TITLE" =~ ^[a-z]+(\(.+\))?!: ]]; then
+          if [[ "$PR_LABELS" == *breaking* || "$PR_TITLE" =~ ^[a-z]+(\(.+\))?!: ]] \
+             || grep -qE '^[a-z]+(\(.+\))?!: ' <<< "$SUBJECTS" \
+             || grep -q 'BREAKING CHANGE' <<< "$BODIES"; then
             BUMP=major
-          elif [[ "$PR_LABELS" == *feature* || "$PR_TITLE" =~ ^feat(\(.+\))?: ]]; then
+          elif [[ "$PR_LABELS" == *feature* || "$PR_TITLE" =~ ^feat(\(.+\))?: ]] \
+             || grep -qE '^feat(\(.+\))?: ' <<< "$SUBJECTS"; then
             BUMP=minor
           fi
-
-          # Latest version tag (default v0.0.0)
-          LAST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
-          LAST=${LAST:-v0.0.0}
           IFS='.' read -r MAJ MIN PAT <<< "${LAST#v}"
 
           case "$BUMP" in

@@ -12,7 +12,7 @@
 
 ## Checklist
 
-- [ ] Branch created from `main` as `<type>/<kebab-case-description>`
+- [ ] Branch created from `develop` as `<type>/<kebab-case-description>`, PR targets `develop` (release PRs: `develop` -> `main`)
 - [ ] PR title follows Conventional Commits (e.g. `feat(auth): add login`)
 - [ ] Commits and description are in English
 - [ ] Labels, Project and Assignee are set

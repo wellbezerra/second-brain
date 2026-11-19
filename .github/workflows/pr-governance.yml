@@ -38,7 +38,7 @@ jobs:
               });
             }
 
-            // 2) Label derived from the branch prefix
+            // 2) Label derived from the branch prefix; release PRs (develop -> main) get "release"
             const prefixToLabel = {
               feat: 'feature', feature: 'feature',
               fix: 'fix', bugfix: 'fix',
@@ -47,8 +47,9 @@ jobs:
               test: 'test', ci: 'ci', perf: 'performance',
               build: 'build', style: 'style',
             };
+            const isRelease = pr.base.ref === 'main' && pr.head.ref === 'develop';
             const prefix = pr.head.ref.split('/')[0];
-            const label = prefixToLabel[prefix];
+            const label = isRelease ? 'release' : prefixToLabel[prefix];
             if (label && !pr.labels.some(l => l.name === label)) {
               await github.rest.issues.addLabels({
                 owner, repo, issue_number: pr.number, labels: [label],
@@ -94,12 +95,20 @@ jobs:
               return !words.some(w => ptWords.includes(w));
             };
 
-            // ---------- Branch name ----------
+            // ---------- Branch flow: <type>/* -> develop -> main ----------
             const branchRe = /^(feat|feature|fix|bugfix|bug|hotfix|chore|docs|refactor|test|ci|perf|build|style)\/[a-z0-9][a-z0-9._-]*$/;
-            if (!isBot && !branchRe.test(pr.head.ref)) {
-              errors.push(`Branch "${pr.head.ref}" is invalid. Use <type>/<kebab-case-description>, e.g. feat/add-login.`);
+            if (pr.base.ref === 'main') {
+              // main is production: only release PRs from develop, opened by the owner
+              if (pr.head.ref !== 'develop') {
+                errors.push(`PRs into main must come from develop (release PR). Retarget "${pr.head.ref}" to develop.`);
+              }
+            } else if (pr.base.ref === 'develop') {
+              if (!isBot && !branchRe.test(pr.head.ref)) {
+                errors.push(`Branch "${pr.head.ref}" is invalid. Use <type>/<kebab-case-description>, e.g. feat/add-login.`);
+              }
+            } else {
+              errors.push(`PRs must target develop (or main, for release PRs from develop). Got base "${pr.base.ref}".`);
             }
-            if (pr.head.ref === 'main') errors.push('PRs must come from a dedicated branch, never from main.');
 
             // ---------- Conventional + English ----------
             const convRe = /^(feat|fix|bug|hotfix|chore|docs|refactor|test|ci|perf|build|style|revert)(\([\w./-]+\))?!?: \S.+/;
