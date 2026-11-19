@@ -48,17 +48,24 @@ describe("scanVault", () => {
     expect(scanVault(root, [...EXCLUDES, "Arquivo"]).files).toEqual(["nova.md"]);
   });
 
-  it("ignora links simbólicos", (ctx) => {
+  it("ignora links para pastas", () => {
     const root = tempDir();
     mkdirSync(join(root, "real"));
     writeFileSync(join(root, "real", "nota.md"), "nota");
-    try {
-      symlinkSync(join(root, "real"), join(root, "atalho"), "junction");
-      symlinkSync(join(root, "real", "nota.md"), join(root, "link.md"), "file");
-    } catch {
-      ctx.skip(); // sem permissão para criar link (Windows sem modo desenvolvedor)
-    }
+    // "junction" no Windows não exige permissão; nos outros sistemas é ignorado.
+    symlinkSync(join(root, "real"), join(root, "atalho"), "junction");
     expect(scanVault(root, EXCLUDES).files).toEqual(["real/nota.md"]);
+  });
+
+  it("ignora links para arquivos", (ctx) => {
+    const root = tempDir();
+    writeFileSync(join(root, "nota.md"), "nota");
+    try {
+      symlinkSync(join(root, "nota.md"), join(root, "link.md"), "file");
+    } catch {
+      ctx.skip(); // Windows sem modo desenvolvedor não cria link de arquivo
+    }
+    expect(scanVault(root, EXCLUDES).files).toEqual(["nota.md"]);
   });
 
   it("raiz inexistente vira aviso, não exceção", () => {

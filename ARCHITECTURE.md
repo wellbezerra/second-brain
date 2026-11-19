@@ -55,6 +55,9 @@ src/
   config.ts     carga da configuração (argumento > ambiente > arquivo > padrão)
   init.ts       preparação do vault (`brain init`)
   version.ts    versão lida do package.json
+  vault.ts      varredura do vault, leitura de nota, frontmatter e título
+  chunk.ts      quebra em trechos guiada por headings (ADR 008)
+  markdown.ts   cercas de código e headings, usados por vault e chunk
 tests/          Vitest; nenhum teste exige Ollama
 docs/           SPEC, ADRs, specs e roadmap
 ```

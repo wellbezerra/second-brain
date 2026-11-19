@@ -78,6 +78,13 @@ describe("chunkNote com o vault de exemplo", () => {
       const previousTail = chunks[i - 1]!.text.slice(-40);
       expect(chunks[i]!.text).toContain(previousTail);
     }
+    // Parágrafos que cabem no alvo não são cortados: todo trecho termina num fim de parágrafo.
+    const paragraphEnds = readNote(FIXTURE, "longa.md")
+      .body.split("\n\n")
+      .map((p) => p.trim().slice(-30));
+    for (const chunk of chunks) {
+      expect(paragraphEnds).toContain(chunk.text.slice(-30));
+    }
   });
 
   it("acentuação é preservada", () => {
