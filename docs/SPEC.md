@@ -1,132 +1,132 @@
-# Brain — segundo cérebro local sobre um vault Obsidian
+# Brain — a local second brain over an Obsidian vault
 
-Visão geral do produto. As decisões estão em [`adr/`](adr/), o detalhamento de
-cada feature em [`specs/`](specs/) e a ordem de construção em
-[`ROADMAP.md`](ROADMAP.md).
+Product overview. Decisions are in [`adr/`](adr/), each feature's detail in
+[`specs/`](specs/) and the build order in [`ROADMAP.md`](ROADMAP.md).
 
-## O problema
+## The problem
 
-Notas pessoais acumulam valor com o tempo, mas só se você conseguir recuperá-las.
-Dois modos de busca falham de formas opostas:
+Personal notes gain value over time, but only if you can get them back. Two
+search modes fail in opposite ways:
 
-- **Palavra-chave** acha o que você lembra ter escrito. Falha quando você lembra
-  da ideia, não dos termos.
-- **Significado** acha o que você quis dizer. Falha em nomes próprios, siglas,
-  trechos de código e qualquer coisa que dependa da grafia exata.
+- **Keyword** finds what you remember writing. It fails when you remember the
+  idea, not the terms.
+- **Meaning** finds what you meant. It fails on proper names, acronyms, code
+  snippets and anything that depends on exact spelling.
 
-Quem escreve nota técnica precisa dos dois. Nenhuma das ferramentas que eu já
-uso entrega os dois sobre os mesmos arquivos, sem mandar o conteúdo para fora da
-máquina.
+Anyone who writes technical notes needs both. None of the tools I already use
+delivers both over the same files without sending the content off the machine.
 
-## O que o Brain é
+## What Brain is
 
-Uma CLI que indexa um vault Obsidian e responde buscas híbridas sobre ele.
+A CLI that indexes an Obsidian vault and answers hybrid searches over it.
 
-- As notas continuam sendo arquivos Markdown numa pasta. O Obsidian segue
-  funcionando normalmente, sem plugin nenhum.
-- O índice é um arquivo SQLite dentro do vault, derivado e descartável.
-- Os embeddings são gerados localmente pelo Ollama. Nada sai da máquina.
-- A busca combina FTS5 e similaridade vetorial e devolve uma lista única.
+- Notes remain Markdown files in a folder. Obsidian keeps working normally,
+  with no plugin at all.
+- The index is a SQLite file in the user data directory, derived and
+  disposable. Brain never writes to the vault
+  ([ADR 012](adr/012-read-only-vault.md)).
+- Embeddings are generated locally by Ollama. Nothing leaves the machine.
+- Search combines FTS5 and vector similarity and returns a single list.
 
-## O que o Brain não é
+## What Brain is not
 
-Delimitar isso importa porque o projeto nasceu como a réplica de um servidor MCP
-remoto, e quase todo o peso daquele projeto vinha de requisitos que aqui não
-existem.
+Drawing this line matters because the project started as a replica of a remote
+MCP server, and almost all of that project's weight came from requirements that
+do not exist here.
 
-| Não é | Porque |
+| It is not | Because |
 |---|---|
-| Um servidor MCP | A interface é CLI local ([ADR 001](adr/001-cli-local-em-vez-de-mcp.md)) |
-| Um serviço remoto | Uso pessoal, uma máquina, sem acesso externo por ora |
-| Um editor | O Obsidian já edita; o Brain indexa e busca |
-| Um sistema multiusuário | Sem autenticação, sem OAuth, sem controle de acesso |
-| Um sync de arquivos | Quem sincroniza é o Git ou o iCloud, se um dia for preciso |
-| Um RAG com geração | Devolve trechos, não respostas. Quem gera texto é o assistente que consome a saída |
+| An MCP server | The interface is a local CLI ([ADR 001](adr/001-local-cli-instead-of-mcp.md)) |
+| A remote service | Personal use, one machine, no external access for now |
+| An editor | Obsidian already edits; Brain only reads the vault ([ADR 012](adr/012-read-only-vault.md)) |
+| A multi-user system | No authentication, no OAuth, no access control |
+| A file sync | Git or iCloud syncs, if that is ever needed |
+| A generative RAG | It returns chunks, not answers. Whatever generates text is the assistant consuming the output |
 
-## Como se parece em uso
+## What it looks like in use
 
 ```console
 $ brain index
-12 notas novas, 3 alteradas, 1 removida — 184 trechos indexados em 6,2s
+12 new notes, 3 changed, 1 removed — 184 chunks indexed in 6.2s
 
-$ brain search "por que escolhemos fila em vez de chamada direta"
-1. Arquitetura/indexacao.md  ·  Indexação > Decisões         (0.81)
-   A fila absorve picos de escrita e deixa a indexação fora do
-   caminho crítico da gravação...
+$ brain search "why we chose a queue instead of a direct call"
+1. Architecture/indexing.md  ·  Indexing > Decisions           (0.81)
+   The queue absorbs write spikes and keeps indexing off the
+   critical path of the write...
 
-2. Diario/2026-03-14.md  ·  Conversa com o time              (0.64)
-   Discutimos chamar o indexador direto do writer. O problema é...
-
-$ brain save "sqlite-vec aceita distance_metric=cosine na definição da coluna" --tag sqlite
-Diario/2026-11-19.md
+2. Journal/2026-03-14.md  ·  Conversation with the team        (0.64)
+   We discussed calling the indexer straight from the writer. The problem is...
 ```
 
-## Arquitetura
+## Architecture
 
-Tudo roda em processo, sem daemon e sem rede externa.
+Everything runs in process, with no daemon and no external network.
 
 ```
          ┌──────────────┐
-         │  vault/*.md  │  ← fonte de verdade (Obsidian edita aqui)
+         │  vault/*.md  │  ← source of truth (Obsidian edits, Brain only reads)
          └──────┬───────┘
-                │ leitura + hash
+                │ read + hash
                 ▼
          ┌──────────────┐        ┌──────────────┐
-         │   indexador  │───────▶│    Ollama    │  embeddings locais
+         │   indexer    │───────▶│    Ollama    │  local embeddings
          └──────┬───────┘        └──────────────┘
-                │ trechos + vetores
+                │ chunks + vectors
                 ▼
    ┌────────────────────────────┐
-   │  vault/.brain/index.db     │  índice derivado, descartável
-   │  ├── files   (manifesto)   │
-   │  ├── chunks  (trechos)     │
+   │  <data-dir>/brain/<id>/    │  derived, disposable index
+   │  index.db                  │  outside the vault
+   │  ├── files   (manifest)    │
+   │  ├── chunks  (chunks)      │
    │  ├── chunks_fts  (FTS5)    │
-   │  └── chunks_vec  (vetores) │
+   │  └── chunks_vec  (vectors) │
    └────────────┬───────────────┘
                 │
                 ▼
          ┌──────────────┐
-         │    busca     │  FTS5 + vetorial, fundidos por RRF
+         │    search    │  FTS5 + vector, fused by RRF
          └──────────────┘
 ```
 
-O índice é sempre reconstruível a partir do vault. Essa é a propriedade que
-permite tratar corrupção, troca de modelo e bug de indexação da mesma forma:
-apagar e reindexar.
+The index can always be rebuilt from the vault. That is the property that lets
+corruption, a model change and an indexing bug be handled the same way: delete
+and reindex.
 
-## Glossário
+## Glossary
 
-- **Vault** — a pasta de notas Markdown. O que o Obsidian chama de vault.
-- **Nota** — um arquivo `.md` dentro do vault.
-- **Trecho** (chunk) — pedaço de uma nota, unidade de busca e de embedding.
-- **Manifesto** — tabela `files`, com o hash de cada nota já indexada. É o que
-  permite saber o que mudou sem reler tudo.
-- **Deriva** (drift) — divergência entre o vault e o índice. Alvo do `reconcile`.
-- **RRF** — reciprocal rank fusion, como as duas listas de busca viram uma.
+- **Vault** — the folder of Markdown notes. What Obsidian calls a vault.
+- **Note** — a `.md` file inside the vault.
+- **Chunk** — a piece of a note, the unit of search and of embedding.
+- **Manifest** — the `files` table, with the hash of each indexed note. It is
+  what makes it possible to know what changed without rereading everything.
+- **Drift** — divergence between the vault and the index. The target of
+  `reconcile`.
+- **RRF** — reciprocal rank fusion, how the two search lists become one.
 
-## Requisitos não-funcionais
+## Non-functional requirements
 
-| Dimensão | Alvo |
+| Dimension | Target |
 |---|---|
-| Indexação incremental | Vault de 2.000 notas sem alterações reindexa em menos de 2s |
-| Latência de busca | Menos de 300ms para um vault de 2.000 notas, embedding da query incluído |
-| Consistência | Após `brain index`, as duas buscas refletem o disco. Não há indexação assíncrona |
-| Custo | R$ 0 recorrente |
-| Rede | Só localhost. O projeto deve funcionar com a máquina offline |
-| Dependências | Node 24, better-sqlite3 (SQLite com FTS5), sqlite-vec, Ollama. Nada mais ([ADR 011](adr/011-node-typescript-como-runtime.md)) |
+| Incremental indexing | A 2,000-note vault with no changes reindexes in under 2s |
+| Search latency | Under 300ms for a 2,000-note vault, query embedding included |
+| Consistency | After `brain index`, both searches reflect the disk. There is no asynchronous indexing |
+| Cost | Zero recurring cost |
+| Network | Localhost only. The project must work with the machine offline |
+| Dependencies | Node 24, better-sqlite3 (SQLite with FTS5), sqlite-vec, Ollama. Nothing else ([ADR 011](adr/011-node-typescript-runtime.md)) |
 
-## Decisões registradas
+## Recorded decisions
 
-| ADR | Decisão |
+| ADR | Decision |
 |---|---|
-| [001](adr/001-cli-local-em-vez-de-mcp.md) | CLI local no lugar de servidor MCP |
-| [002](adr/002-vault-como-fonte-de-verdade.md) | O vault em disco é a fonte de verdade |
-| [003](adr/003-embeddings-locais-com-ollama.md) | Embeddings locais via Ollama |
-| [004](adr/004-sqlite-unico-para-o-indice.md) | Um SQLite para manifesto, FTS5 e vetores |
-| [005](adr/005-busca-hibrida-com-rrf.md) | Busca híbrida fundida por RRF |
-| [006](adr/006-indexacao-incremental-por-hash.md) | Indexação incremental por hash |
-| [007](adr/007-indice-dentro-do-vault.md) | O índice mora dentro do vault |
-| [008](adr/008-chunking-guiado-por-headings.md) | Chunking guiado por headings |
-| [009](adr/009-reconciliacao-sob-demanda.md) | Reconciliação sob demanda, sem daemon |
-| [010](adr/010-git-opcional-e-explicito.md) | Git opcional e explícito |
-| [011](adr/011-node-typescript-como-runtime.md) | Node.js e TypeScript como runtime |
+| [001](adr/001-local-cli-instead-of-mcp.md) | Local CLI instead of an MCP server |
+| [002](adr/002-vault-as-source-of-truth.md) | The vault on disk is the source of truth |
+| [003](adr/003-local-embeddings-with-ollama.md) | Local embeddings with Ollama |
+| [004](adr/004-single-sqlite-index.md) | One SQLite file for the manifest, FTS5 and vectors |
+| [005](adr/005-hybrid-search-with-rrf.md) | Hybrid search fused by RRF |
+| [006](adr/006-incremental-indexing-by-hash.md) | Incremental indexing by hash |
+| [007](adr/007-index-inside-the-vault.md) | The index lives inside the vault (superseded by 012) |
+| [008](adr/008-heading-guided-chunking.md) | Heading-guided chunking |
+| [009](adr/009-on-demand-reconciliation.md) | On-demand reconciliation, no daemon |
+| [010](adr/010-optional-explicit-git.md) | Optional, explicit Git (superseded by 012) |
+| [011](adr/011-node-typescript-runtime.md) | Node.js and TypeScript as the runtime |
+| [012](adr/012-read-only-vault.md) | The vault is read-only to Brain |

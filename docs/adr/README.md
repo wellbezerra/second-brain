@@ -1,31 +1,39 @@
-# Registros de decisão de arquitetura
+# Architecture decision records
 
-Cada arquivo registra uma decisão: o contexto em que ela foi tomada, o que foi
-decidido, o que foi descartado e com que consequência.
+Each file records one decision: the context in which it was made, what was
+decided, what was discarded and with what consequence.
 
-O propósito é responder "por que isso é assim?" meses depois, sem depender da
-memória. Decisão revista não se apaga: cria-se um ADR novo que supera o
-anterior, e o anterior muda de status para *superada por NNN*.
+The purpose is to answer "why is it like this?" months later, without relying
+on memory. A revised decision is not erased: a new ADR supersedes the old one,
+and the old one's status changes to *superseded by NNN*.
 
-| # | Decisão | Status |
+| # | Decision | Status |
 |---|---|---|
-| [001](001-cli-local-em-vez-de-mcp.md) | CLI local no lugar de servidor MCP | aceita |
-| [002](002-vault-como-fonte-de-verdade.md) | O vault em disco é a fonte de verdade | aceita |
-| [003](003-embeddings-locais-com-ollama.md) | Embeddings locais via Ollama | aceita |
-| [004](004-sqlite-unico-para-o-indice.md) | Um SQLite para manifesto, FTS5 e vetores | aceita |
-| [005](005-busca-hibrida-com-rrf.md) | Busca híbrida fundida por RRF | aceita |
-| [006](006-indexacao-incremental-por-hash.md) | Indexação incremental por hash | aceita |
-| [007](007-indice-dentro-do-vault.md) | O índice mora dentro do vault | aceita |
-| [008](008-chunking-guiado-por-headings.md) | Chunking guiado por headings | aceita |
-| [009](009-reconciliacao-sob-demanda.md) | Reconciliação sob demanda, sem daemon | aceita |
-| [010](010-git-opcional-e-explicito.md) | Git opcional e explícito | aceita |
-| [011](011-node-typescript-como-runtime.md) | Node.js e TypeScript como runtime | aceita |
+| [001](001-local-cli-instead-of-mcp.md) | Local CLI instead of an MCP server | accepted |
+| [002](002-vault-as-source-of-truth.md) | The vault on disk is the source of truth | accepted |
+| [003](003-local-embeddings-with-ollama.md) | Local embeddings with Ollama | accepted |
+| [004](004-single-sqlite-index.md) | One SQLite file for the manifest, FTS5 and vectors | accepted |
+| [005](005-hybrid-search-with-rrf.md) | Hybrid search fused by RRF | accepted |
+| [006](006-incremental-indexing-by-hash.md) | Incremental indexing by hash | accepted |
+| [007](007-index-inside-the-vault.md) | The index lives inside the vault | superseded by 012 |
+| [008](008-heading-guided-chunking.md) | Heading-guided chunking | accepted |
+| [009](009-on-demand-reconciliation.md) | On-demand reconciliation, no daemon | accepted |
+| [010](010-optional-explicit-git.md) | Optional, explicit Git | superseded by 012 |
+| [011](011-node-typescript-runtime.md) | Node.js and TypeScript as the runtime | accepted |
+| [012](012-read-only-vault.md) | The vault is read-only to Brain | accepted |
 
-## Formato
+## Format
 
-Título, status com data, e quatro seções: **Contexto**, **Decisão**,
-**Alternativas consideradas** e **Consequências**.
+Title, status with date, and four sections: **Context**, **Decision**,
+**Alternatives considered** and **Consequences**.
 
-A seção de alternativas é a que carrega mais valor com o tempo. Registrar o que
-foi descartado e por quê evita refazer a mesma análise, e deixa claro quando a
-premissa mudou a ponto de valer reabrir a discussão.
+The alternatives section is the one that gains value over time. Recording what
+was discarded and why avoids redoing the same analysis, and makes it clear when
+a premise has changed enough to reopen the discussion.
+
+## Language
+
+ADRs 001–011 were written in Portuguese and translated to English on
+2026-11-19, when the project adopted English as its only language. The
+translation changed wording only; no decision, alternative or consequence was
+altered.

@@ -1,63 +1,63 @@
-# Arquitetura
+# Architecture
 
-O Brain é uma CLI local, em Node/TypeScript, que indexa um vault Obsidian e
-responde buscas híbridas sobre ele. Visão de produto em [docs/SPEC.md](docs/SPEC.md),
-decisões em [docs/adr/](docs/adr/), ordem de construção em [docs/ROADMAP.md](docs/ROADMAP.md).
+Brain is a local CLI, in Node/TypeScript, that indexes an Obsidian vault and
+answers hybrid searches over it. Product overview in [docs/SPEC.md](docs/SPEC.md),
+decisions in [docs/adr/](docs/adr/), build order in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ```
          ┌──────────────┐
-         │  vault/*.md  │  ← fonte de verdade (Obsidian edita aqui)
+         │  vault/*.md  │  ← source of truth (Obsidian edits, Brain only reads)
          └──────┬───────┘
-                │ leitura + hash
+                │ read + hash
                 ▼
          ┌──────────────┐        ┌──────────────┐
-         │   indexador  │───────▶│    Ollama    │  embeddings locais
+         │   indexer    │───────▶│    Ollama    │  local embeddings
          └──────┬───────┘        └──────────────┘
-                │ trechos + vetores
+                │ chunks + vectors
                 ▼
    ┌────────────────────────────┐
-   │  vault/.brain/index.db     │  índice derivado, descartável
+   │ <data-dir>/brain/<id>/     │  derived, disposable index,
+   │ index.db                   │  outside the vault
    │  files · chunks ·          │
    │  chunks_fts · chunks_vec   │
    └────────────┬───────────────┘
                 ▼
          ┌──────────────┐
-         │    busca     │  FTS5 + vetorial, fundidos por RRF
+         │    search    │  FTS5 + vector, fused by RRF
          └──────────────┘
 ```
 
-| Assunto | Como | Decisão |
+| Subject | How | Decision |
 |---|---|---|
-| Interface | CLI local, sem servidor | [ADR 001](docs/adr/001-cli-local-em-vez-de-mcp.md) |
-| Fonte de verdade | Arquivos Markdown do vault | [ADR 002](docs/adr/002-vault-como-fonte-de-verdade.md) |
-| Embeddings | Ollama local (`bge-m3`) | [ADR 003](docs/adr/003-embeddings-locais-com-ollama.md) |
-| Índice | Um SQLite: manifesto, FTS5 e `sqlite-vec` | [ADR 004](docs/adr/004-sqlite-unico-para-o-indice.md) |
-| Busca | Híbrida, fundida por RRF | [ADR 005](docs/adr/005-busca-hibrida-com-rrf.md) |
-| Indexação | Incremental por hash | [ADR 006](docs/adr/006-indexacao-incremental-por-hash.md) |
-| Onde fica o índice | `<vault>/.brain/` | [ADR 007](docs/adr/007-indice-dentro-do-vault.md) |
-| Chunking | Guiado por headings | [ADR 008](docs/adr/008-chunking-guiado-por-headings.md) |
-| Reparo | `brain reconcile`, sob demanda | [ADR 009](docs/adr/009-reconciliacao-sob-demanda.md) |
-| Histórico | Git opcional | [ADR 010](docs/adr/010-git-opcional-e-explicito.md) |
-| Runtime | Node 24 + TypeScript | [ADR 011](docs/adr/011-node-typescript-como-runtime.md) |
+| Interface | Local CLI, no server | [ADR 001](docs/adr/001-local-cli-instead-of-mcp.md) |
+| Source of truth | The vault's Markdown files | [ADR 002](docs/adr/002-vault-as-source-of-truth.md) |
+| Embeddings | Local Ollama (`bge-m3`) | [ADR 003](docs/adr/003-local-embeddings-with-ollama.md) |
+| Index | One SQLite file: manifest, FTS5 and `sqlite-vec` | [ADR 004](docs/adr/004-single-sqlite-index.md) |
+| Search | Hybrid, fused by RRF | [ADR 005](docs/adr/005-hybrid-search-with-rrf.md) |
+| Indexing | Incremental by hash | [ADR 006](docs/adr/006-incremental-indexing-by-hash.md) |
+| Vault access | Read-only; the index lives in the user data directory | [ADR 012](docs/adr/012-read-only-vault.md) |
+| Chunking | Heading-guided | [ADR 008](docs/adr/008-heading-guided-chunking.md) |
+| Repair | `brain reconcile`, on demand | [ADR 009](docs/adr/009-on-demand-reconciliation.md) |
+| Runtime | Node 24 + TypeScript | [ADR 011](docs/adr/011-node-typescript-runtime.md) |
 
-## Fronteira entre CLI e lógica
+## Boundary between CLI and logic
 
-`src/cli.ts` é o único módulo que conhece `parseArgs`, `stdout`, `readline` e
-`process.exit`. Todo o resto recebe argumentos e devolve dados ou lança erros
-tipados. É o que mantém aberta a porta para uma API HTTP ou um servidor MCP
-por cima, como casca fina.
+`src/cli.ts` is the only module that knows `parseArgs`, `stdout`, `readline` and
+`process.exit`. Everything else takes arguments and returns data or throws typed
+errors. That is what keeps the door open for an HTTP API or an MCP server on
+top, as a thin shell.
 
-## Repositório
+## Repository
 
 ```
 src/
-  cli.ts        entrada do comando `brain`; parse, impressão, códigos de saída
-  config.ts     carga da configuração (argumento > ambiente > arquivo > padrão)
-  init.ts       preparação do vault (`brain init`)
-  version.ts    versão lida do package.json
-tests/          Vitest; nenhum teste exige Ollama
-docs/           SPEC, ADRs, specs e roadmap
+  cli.ts        entry point of the `brain` command; parsing, printing, exit codes
+  config.ts     configuration loading (argument > environment > file > default)
+  init.ts       writes Brain's own configuration (`brain init`); never the vault
+  version.ts    version read from package.json
+tests/          Vitest; no test requires Ollama
+docs/           SPEC, ADRs, specs and roadmap
 ```
 
-Os módulos de vault, embeddings, índice, busca, notas, reconciliação e Git
-entram um por commit, seguindo o roadmap.
+The vault, embeddings, index, search and reconciliation modules arrive one per
+commit, following the roadmap.

@@ -1,90 +1,94 @@
-# Roadmap — dez features, dez commits
+# Roadmap — eight features
 
-Cada feature é uma spec e vira **um commit**. A ordem respeita as
-dependências: nenhum commit depende de algo que ainda não existe, e cada um
-deixa a suíte de testes verde.
+Each feature is a spec and becomes **one commit**. The order respects the
+dependencies: no commit depends on something that does not exist yet, and each
+one leaves the test suite green.
 
-## A sequência
+Specs 07 (note creation) and 09 (Git history) are **withdrawn**: both wrote to
+the vault, which [ADR 012](adr/012-read-only-vault.md) forbids. Their numbers
+are kept so links stay stable.
 
-| # | Commit | Spec | Depende de |
+## The sequence
+
+| # | Commit | Spec | Depends on |
 |---|---|---|---|
-| 1 | `feat: esqueleto do projeto e configuração do vault` | [01](specs/01-esqueleto-e-configuracao.md) | — |
-| 2 | `feat: leitura do vault e chunking de Markdown` | [02](specs/02-leitura-do-vault-e-chunking.md) | 1 |
-| 3 | `feat: embeddings locais via Ollama` | [03](specs/03-embeddings-locais.md) | 1 |
-| 4 | `feat: esquema do índice em SQLite com FTS5 e sqlite-vec` | [04](specs/04-esquema-do-indice.md) | 1 |
-| 5 | `feat: indexação incremental do vault` | [05](specs/05-indexacao-incremental.md) | 2, 3, 4 |
-| 6 | `feat: busca híbrida por palavra-chave e significado` | [06](specs/06-busca-hibrida.md) | 5 |
-| 7 | `feat: criação de notas pela CLI` | [07](specs/07-criacao-de-notas.md) | 5 |
-| 8 | `feat: reconciliação do índice` | [08](specs/08-reconciliacao.md) | 5 |
-| 9 | `feat: histórico Git opcional do vault` | [09](specs/09-historico-git.md) | 7 |
-| 10 | `feat: empacotamento, instalação e avaliação da busca` | [10](specs/10-empacotamento-e-avaliacao.md) | todas |
+| 1 | `feat: project skeleton and vault configuration` | [01](specs/01-skeleton-and-configuration.md) | — |
+| 2 | `feat: vault reading and Markdown chunking` | [02](specs/02-vault-reading-and-chunking.md) | 1 |
+| 3 | `feat: local embeddings via Ollama` | [03](specs/03-local-embeddings.md) | 1 |
+| 4 | `feat: SQLite index schema with FTS5 and sqlite-vec` | [04](specs/04-index-schema.md) | 1 |
+| 5 | `feat: incremental vault indexing` | [05](specs/05-incremental-indexing.md) | 2, 3, 4 |
+| 6 | `feat: hybrid keyword and semantic search` | [06](specs/06-hybrid-search.md) | 5 |
+| 8 | `feat: index reconciliation` | [08](specs/08-reconciliation.md) | 5 |
+| 10 | `feat: packaging, installation and search evaluation` | [10](specs/10-packaging-and-evaluation.md) | all |
 
 ```
 1 ─┬─ 2 ─┐
-   ├─ 3 ─┼─ 5 ─┬─ 6 ───────┐
-   └─ 4 ─┘     ├─ 7 ─ 9 ───┼─ 10
-               └─ 8 ───────┘
+   ├─ 3 ─┼─ 5 ─┬─ 6 ─┬─ 10
+   └─ 4 ─┘     └─ 8 ─┘
 ```
 
-Os commits 2, 3 e 4 são independentes entre si — dá para fazer em qualquer
-ordem, ou em paralelo. Os commits 6, 7 e 8 também.
+Commits 2, 3 and 4 are independent of each other — they can be done in any
+order, or in parallel. So are commits 6 and 8.
 
-## Onde o projeto passa a servir para algo
+## Where the project starts being useful
 
-O **commit 5** é o primeiro fim a fim: indexa um vault de verdade. Ainda não
-busca, mas já dá para olhar o índice e confirmar que o chunking faz sentido.
+**Commit 5** is the first end-to-end one: it indexes a real vault. It does not
+search yet, but you can already look at the index and confirm that chunking
+makes sense.
 
-O **commit 6** é o momento em que o projeto justifica a própria existência.
-Daí em diante o uso diário já é possível, e os commits 7 a 10 reduzem atrito
-e fecham arestas.
+**Commit 6** is the moment the project justifies its own existence. From there
+on daily use is possible, and commits 8 and 10 close the gaps.
 
-Se a vontade de usar falar mais alto que a de terminar, parar depois do 7 é
-uma opção honesta: dá para capturar e buscar. O 8 e o 10 são o que torna o
-projeto sustentável em vez de um protótipo que funcionou uma vez.
+If the urge to use it outweighs the urge to finish, stopping after 6 is an
+honest option: you can search. 8 and 10 are what make the project sustainable
+instead of a prototype that worked once.
 
-> **Runtime.** O projeto é Node/TypeScript ([ADR 011](adr/011-node-typescript-como-runtime.md)).
-> As specs 02 a 10 ainda citam Python (`pytest`, `httpx`, `pip`); cada uma é
-> corrigida no commit que a implementa.
+> **Runtime.** The project is Node/TypeScript ([ADR 011](adr/011-node-typescript-runtime.md)).
+> Specs 02 to 10 still mention Python (`pytest`, `httpx`, `pip`); each one is
+> corrected in the commit that implements it.
 
-## Regras para cada commit
+## Rules for each commit
 
-- **Teste antes do código.** O teste que falha vai num commit próprio, antes
-  da implementação. Isso vale sobretudo para o teste da segunda indexação
-  (spec 05) e para o do `mtime` mentiroso (spec 08) — os dois descrevem
-  comportamento que é fácil quebrar sem perceber.
-- **Suíte verde ao fim de cada commit.** Nada de "conserto no próximo".
-- **Nenhum teste exige Ollama.** `HashEmbedder` existe para isso desde a
-  spec 03. Quebrar essa regra inviabiliza o CI.
-- **Mudou a decisão, muda o ADR.** Não se edita um ADR aceito: escreve-se
-  outro que o supera. A spec, essa sim, pode ser corrigida quando a
-  implementação revelar que ela estava errada — e geralmente revela.
-- **Nada abaixo da CLI imprime.** A fronteira da spec 01 é o que mantém a
-  porta aberta para uma API ou um servidor MCP depois.
+- **Test before code.** The failing test goes in its own commit, before the
+  implementation. This applies above all to the second-indexing test (spec 05)
+  and to the lying-`mtime` test (spec 08) — both describe behaviour that is easy
+  to break without noticing.
+- **Green suite at the end of every commit.** No "fix it in the next one".
+- **No test requires Ollama.** `HashEmbedder` exists for that since spec 03.
+  Breaking this rule makes CI impossible.
+- **A changed decision changes the ADR.** An accepted ADR is not edited: a new
+  one supersedes it. The spec, on the other hand, may be corrected when the
+  implementation reveals it was wrong — and it usually does.
+- **Nothing below the CLI prints.** The boundary from spec 01 is what keeps the
+  door open for an API or an MCP server later.
 
-## O que fica para depois
+## Deferred
 
-Registrado aqui para não virar escopo escondido no meio do caminho:
+Recorded here so it does not become hidden scope along the way:
 
-- **Detecção de renomeação.** Hoje renomear é remoção mais inclusão, e
-  reindexa à toa. Dá para resolver casando hashes órfãos ([ADR 006](adr/006-indexacao-incremental-por-hash.md)).
-- **API HTTP local.** A estrutura já permite; falta o caso de uso.
-- **Servidor MCP.** Fecharia o círculo com o projeto original, agora por
-  escolha e não por herança.
-- **Sync entre máquinas por Git.** Viável sem mudança de desenho.
-- **Reranking com cross-encoder.** Só faz sentido depois que o `brain eval`
-  mostrar onde a ordenação erra ([ADR 005](adr/005-busca-hibrida-com-rrf.md)).
-- **Backlinks e grafo.** O Obsidian já faz; só valeria se a busca precisasse
-  deles para ordenar.
+- **Rename detection.** Today a rename is a removal plus an addition, and it
+  reindexes for nothing. Solvable by matching orphaned hashes
+  ([ADR 006](adr/006-incremental-indexing-by-hash.md)).
+- **Local HTTP API.** The structure already allows it; the use case is missing.
+- **MCP server.** It would close the circle with the original project, now by
+  choice and not by inheritance.
+- **Pruning orphaned indexes.** Moving or deleting a vault leaves its index in
+  the data directory; `vault.json` makes a safe `brain prune` possible
+  ([ADR 012](adr/012-read-only-vault.md)).
+- **Cross-encoder reranking.** Only makes sense after `brain eval` shows where
+  ordering goes wrong ([ADR 005](adr/005-hybrid-search-with-rrf.md)).
+- **Backlinks and graph.** Obsidian already does it; only worth it if search
+  needed them for ranking.
 
-## Decisões ainda em aberto
+## Open questions
 
-Nada aqui bloqueia o commit 1. São perguntas que a implementação vai responder
-melhor que eu agora:
+Nothing here blocks commit 1. These are questions the implementation will answer
+better than I can now:
 
-1. **1.200 caracteres é o alvo certo de trecho?** Chutado com base no que é
-   comum. O `brain eval` da spec 10 é que vai dizer.
-2. **`bge-m3` ou um modelo menor?** `bge-m3` é bom e multilíngue, mas pesado.
-   Se a indexação inicial demorar demais nesta máquina, `nomic-embed-text` é
-   a alternativa a medir.
-3. **Peso do `heading` no BM25.** Começa em 2× o do `text`, por instinto.
-   Também é caso de medir.
+1. **Is 1,200 characters the right chunk target?** Guessed from what is common.
+   `brain eval` from spec 10 will tell.
+2. **`bge-m3` or a smaller model?** `bge-m3` is good and multilingual, but heavy.
+   If initial indexing takes too long on this machine, `nomic-embed-text` is the
+   alternative to measure.
+3. **`heading` weight in BM25.** Starts at 2× the weight of `text`, by instinct.
+   Also something to measure.
