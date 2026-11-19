@@ -1,0 +1,4 @@
+- buy liquid seaweed fertilizer for the tomatoes
+- call the plumber about the slow leak under the kitchen sink
+- return the library copy of Deep Work before Friday
+- renew the car insurance; the quote went up 12%
