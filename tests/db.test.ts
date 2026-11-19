@@ -9,8 +9,9 @@ import { tempDir } from "./helpers.js";
 const embedder = new HashEmbedder();
 const IDENTITY: IndexIdentity = { provider: "hash", model: "hash-64", dim: 64 };
 
-function open(identity: IndexIdentity | undefined = IDENTITY, path = join(tempDir(), ".brain", "index.db")) {
-  return { index: BrainIndex.open(path, identity), path };
+/** `null` abre sem identidade (só leitura); omitido, usa a do HashEmbedder. */
+function open(identity: IndexIdentity | null = IDENTITY, path = join(tempDir(), ".brain", "index.db")) {
+  return { index: BrainIndex.open(path, identity ?? undefined), path };
 }
 
 const file = (path: string, hash = `h-${path}`) => ({
@@ -111,7 +112,7 @@ describe("identidade do índice: provedor, modelo e dimensão", () => {
   });
 
   it("abrir sem identidade não cria a tabela vetorial, e serve para ler", () => {
-    const { index, path } = open(undefined);
+    const { index, path } = open(null);
     expect(index.identity()).toBeUndefined();
     expect(index.counts()).toEqual({ files: 0, chunks: 0, fts: 0, vec: 0 });
     index.close();
@@ -122,7 +123,7 @@ describe("identidade do índice: provedor, modelo e dimensão", () => {
   });
 
   it("sem identidade, inserir trechos é erro", async () => {
-    const { index } = open(undefined);
+    const { index } = open(null);
     const id = index.upsertFile(file("a.md"));
     expect(() => index.insertChunks(id, chunks("x"), [[1]])).toThrow(IndexError);
     index.close();
@@ -247,8 +248,8 @@ describe("as tabelas de busca funcionam como o desenho pede", () => {
   it("FTS5 ignora acentos e indexa o heading", async () => {
     const { index } = open();
     await addNote(index, "a.md", "estudo de vetorização local");
-    expect(index.debugFts("vetorizacao")).toHaveLength(1);
-    expect(index.debugFts("heading:secao")).toHaveLength(1);
+    expect(index.matchText("vetorizacao")).toHaveLength(1);
+    expect(index.matchText("heading:secao")).toHaveLength(1);
     index.close();
   });
 
@@ -256,7 +257,7 @@ describe("as tabelas de busca funcionam como o desenho pede", () => {
     const { index } = open();
     await addNote(index, "a.md", "busca híbrida com sqlite", "receita de bolo de cenoura");
     const [query] = await embedder.embed(["busca híbrida sqlite"]);
-    const [first] = index.debugNearest(query!, 2);
+    const [first] = index.nearest(query!, 2);
     expect(index.chunkText(first!.chunkId)).toBe("busca híbrida com sqlite");
     index.close();
   });

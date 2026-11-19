@@ -62,10 +62,12 @@ src/
   embedders/    um cliente por provedor: openai, gemini, voyage, ollama;
                 http.ts (timeout, novas tentativas, erros) e index.ts (escolha)
   hash-embedder.ts  embedder determinístico para testes, sem rede
+  db.ts         o índice: esquema, identidade do modelo, escrita nas três tabelas
+  status.ts     estado do índice e notas pendentes (`brain status`)
   doctor.ts     diagnóstico dos pré-requisitos (`brain doctor`)
 tests/          Vitest; nenhum teste usa rede
 docs/           SPEC, ADRs, specs e roadmap
 ```
 
-Os módulos de vault, embeddings, índice, busca, notas, reconciliação e Git
+Os módulos de busca, notas, reconciliação e Git
 entram um por commit, seguindo o roadmap.

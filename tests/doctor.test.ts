@@ -102,8 +102,8 @@ describe("runDoctor", () => {
 
   it("SQLite real: versão, FTS5 e sqlite-vec carregando", async () => {
     const checks = await runDoctor({ nodeVersion: "v24.0.0", settings: settings(tempDir()), embedder: new HashEmbedder() });
-    expect(checks.find((c) => c.name === "sqlite")!.detail).toMatch(/^3.d+.d+ com FTS5$/);
-    expect(checks.find((c) => c.name === "sqlite-vec")!.detail).toMatch(/^vd+.d+/);
+    expect(checks.find((c) => c.name === "sqlite")!.detail).toMatch(/^3\.\d+\.\d+ com FTS5$/);
+    expect(checks.find((c) => c.name === "sqlite-vec")!.detail).toMatch(/^v\d+\.\d+/);
   });
 
   it("SQLite sem FTS5 ou sqlite-vec que não carrega falham com orientação", async () => {

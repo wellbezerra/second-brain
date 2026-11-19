@@ -3,7 +3,8 @@
 **Commit:** `feat: esquema do índice em SQLite com FTS5 e sqlite-vec`
 **Depende de:** [01](01-esqueleto-e-configuracao.md)
 **Decisão de referência:** [ADR 004](../adr/004-sqlite-unico-para-o-indice.md),
-[ADR 007](../adr/007-indice-dentro-do-vault.md)
+[ADR 007](../adr/007-indice-dentro-do-vault.md),
+[ADR 012](../adr/012-embeddings-por-api-com-provedor-configuravel.md)
 
 ## Objetivo
 
@@ -26,10 +27,16 @@ PRAGMA foreign_keys = ON;
 PRAGMA synchronous = NORMAL;
 ```
 
-A extensão `sqlite-vec` é carregada logo após abrir, e a carga de extensões é
-desabilitada em seguida. Se o Python não permitir carregar extensões, a
-mensagem precisa dizer isso e apontar o `brain doctor`, porque é uma limitação
-do interpretador e não algo que o projeto resolva sozinho.
+O SQLite vem do `better-sqlite3` (binário pronto, com FTS5) e a extensão do
+pacote `sqlite-vec`, carregada logo após abrir. O `better-sqlite3` só carrega
+extensões pela API em C: `load_extension()` em SQL nunca fica ligado, então não
+há o que desabilitar depois. Se a extensão não carregar, o erro diz isso e
+aponta o `brain doctor`, que ganha os itens `sqlite` (versão e FTS5) e
+`sqlite-vec`.
+
+O `better-sqlite3` é instalado sem rodar o script de compilação
+(`allowScripts` no `package.json`): os binários prontos cobrem Windows, macOS
+e Linux, e compilar exigiria toolchain de C++.
 
 ## Tabelas
 
@@ -38,16 +45,16 @@ CREATE TABLE meta (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
--- chaves: schema_version, dim, model, last_index_at
+-- chaves: schema_version, provider, model, dim, last_index_at
 
 CREATE TABLE files (
     id         INTEGER PRIMARY KEY,
     path       TEXT    NOT NULL UNIQUE,   -- relativo à raiz do vault
     hash       TEXT    NOT NULL,          -- sha256 do conteúdo
-    mtime      REAL    NOT NULL,
+    mtime      REAL    NOT NULL,          -- milissegundos, como stat.mtimeMs
     size       INTEGER NOT NULL,
     title      TEXT,
-    indexed_at REAL    NOT NULL
+    indexed_at REAL    NOT NULL           -- milissegundos
 );
 
 CREATE TABLE chunks (
@@ -85,40 +92,58 @@ tabelas e falte na terceira.
 Vale a pena enunciar isso aqui porque é o que o `reconcile` (spec 08) verifica,
 e é a primeira coisa a suspeitar quando a busca devolver resultado estranho.
 
-## Dimensão
+## Identidade: provedor, modelo e dimensão
 
-`chunks_vec` só pode nascer quando a dimensão é conhecida, e a dimensão vem do
-modelo. Então:
+Com embeddings por API (ADR 012), dimensão igual não basta: dois modelos de
+1024 dimensões geram vetores que não se comparam. O índice guarda a
+**identidade** de quem gerou os vetores — provedor, modelo e dimensão — e:
 
-- a tabela é criada preguiçosamente, na primeira indexação;
-- a dimensão fica em `meta.dim`;
-- abrir o índice com um modelo de dimensão diferente é erro, com a mensagem
-  dizendo para rodar `brain index --rebuild`. Nunca uma reconstrução
-  silenciosa: reindexar um vault grande é caro e deve ser escolha de quem usa.
+- `chunks_vec` é criada preguiçosamente, na primeira abertura com identidade,
+  porque só então a dimensão é conhecida;
+- a identidade fica em `meta.provider`, `meta.model` e `meta.dim`;
+- abrir o índice com qualquer um dos três diferente é erro, com a mensagem
+  dizendo para rodar `brain index --rebuild` ou voltar a configuração. Nunca
+  uma reconstrução silenciosa: reindexar um vault grande custa tempo e, com
+  API, dinheiro, e deve ser escolha de quem usa.
+
+Esquema mais novo que o desta versão (`meta.schema_version`) também é erro.
 
 Comandos que só leem (como `status` num índice vazio) abrem sem dimensão e
 funcionam sem a tabela vetorial.
 
 ## Operações
 
-| Função | O que faz |
-|---|---|
-| `connect(path, dim=None)` | abre, carrega extensão, migra |
-| `manifest(conn)` | mapa `caminho -> linha`, para comparar com o disco |
-| `upsert_file(...)` | grava no manifesto e **apaga os trechos antigos**, devolvendo o id |
-| `insert_chunks(conn, file_id, chunks, embeddings)` | insere nas três tabelas |
-| `drop_file(conn, file_id)` | apaga a nota e tudo derivado dela |
-| `counts(conn)` | contagem das quatro tabelas, usado por `status` e `reconcile` |
+Classe `BrainIndex` em `src/db.ts`; erros são `IndexError` com `kind`.
 
-`upsert_file` apagar os trechos antigos não é efeito colateral escondido: é o
+| Método | O que faz |
+|---|---|
+| `BrainIndex.open(path, identity?)` | abre, carrega extensão, migra, confere ou grava a identidade |
+| `manifest()` | mapa `caminho -> linha`, para comparar com o disco |
+| `upsertFile(file)` | grava no manifesto e **apaga os trechos antigos**, devolvendo o id |
+| `insertChunks(fileId, chunks, embeddings)` | valida contagem e dimensão, depois insere nas três tabelas |
+| `dropFile(fileId)` | apaga a nota e tudo derivado dela |
+| `counts()` | contagem das quatro tabelas, usado por `status` e `reconcile` |
+| `chunkIds()` | ids de cada tabela, para conferir o invariante |
+| `transaction(fn)` | agrupa operações; aninhada, vira savepoint |
+| `matchText(q)`, `nearest(v, k)` | consultas cruas ao FTS5 e ao vec0, base da spec 06 |
+
+Os vetores chegam normalizados do embedder, então a distância L2 do `vec0`
+ordena igual ao cosseno.
+
+`upsertFile` apagar os trechos antigos não é efeito colateral escondido: é o
 que torna reindexar uma nota uma operação só, sem janela em que a nota esteja
 no manifesto com trechos velhos.
 
 ## `brain status`
 
-Imprime: caminho do vault, modelo e dimensão, contagem de notas e trechos,
+Imprime: caminho do vault, provedor, modelo e dimensão (e se a configuração
+atual pede outros), contagem de notas e trechos,
 tamanho do índice, quando foi a última indexação e **quantas notas mudaram no
 disco desde então**.
+
+"Mudou" é mtime ou tamanho diferente do manifesto, além de notas novas e
+removidas; conferir o hash fica para o `brain index`. `status` nunca cria o
+arquivo de índice.
 
 Esse último número é o que torna visível a limitação da
 [ADR 009](../adr/009-reconciliacao-sob-demanda.md): a busca responde pela
@@ -131,7 +156,8 @@ Esse último número é o que torna visível a limitação da
 - `insert_chunks` com contagens diferentes de trechos e vetores levanta erro
   antes de escrever qualquer coisa.
 - `drop_file` deixa as quatro contagens coerentes.
-- Reabrir com dimensão diferente levanta erro citando `--rebuild`.
+- Reabrir com provedor, modelo ou dimensão diferente levanta erro citando
+  `--rebuild`.
 - `status` funciona num índice recém-criado e vazio.
 
 ## Testes
