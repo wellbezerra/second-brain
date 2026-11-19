@@ -1,30 +1,31 @@
 # Specs
 
-Uma spec por feature, uma feature por commit. A ordem e as dependências estão
-no [ROADMAP](../ROADMAP.md); a visão geral do produto, na [SPEC](../SPEC.md).
+One spec per feature, one feature per commit. Order and dependencies are in the
+[ROADMAP](../ROADMAP.md); the product overview is in the [SPEC](../SPEC.md).
 
-| # | Spec | O que entrega |
+| # | Spec | Delivers |
 |---|---|---|
-| [01](01-esqueleto-e-configuracao.md) | Esqueleto e configuração | pacote instalável, `brain init` |
-| [02](02-leitura-do-vault-e-chunking.md) | Leitura do vault e chunking | varredura e quebra em trechos |
-| [03](03-embeddings-locais.md) | Embeddings locais | cliente Ollama, `brain doctor` |
-| [04](04-esquema-do-indice.md) | Esquema do índice | SQLite com FTS5 e vetores, `brain status` |
-| [05](05-indexacao-incremental.md) | Indexação incremental | `brain index` |
-| [06](06-busca-hibrida.md) | Busca híbrida | `brain search` |
-| [07](07-criacao-de-notas.md) | Criação de notas | `brain save` |
-| [08](08-reconciliacao.md) | Reconciliação | `brain reconcile` |
-| [09](09-historico-git.md) | Histórico Git opcional | commit automático, `brain log` |
-| [10](10-empacotamento-e-avaliacao.md) | Empacotamento e avaliação | instalação, `brain eval`, CI |
+| [01](01-skeleton-and-configuration.md) | Skeleton and configuration | installable package, `brain init` |
+| [02](02-vault-reading-and-chunking.md) | Vault reading and chunking | walking the vault and splitting into chunks |
+| [03](03-local-embeddings.md) | Local embeddings | Ollama client, `brain doctor` |
+| [04](04-index-schema.md) | Index schema | SQLite with FTS5 and vectors, `brain status` |
+| [05](05-incremental-indexing.md) | Incremental indexing | `brain index` |
+| [06](06-hybrid-search.md) | Hybrid search | `brain search` |
+| [07](07-note-creation.md) | Note creation | `brain save` |
+| [08](08-reconciliation.md) | Reconciliation | `brain reconcile` |
+| [09](09-git-history.md) | Optional Git history | automatic commit, `brain log` |
+| [10](10-packaging-and-evaluation.md) | Packaging and evaluation | installation, `brain eval`, CI |
 
-## Formato
+## Format
 
-Cada spec traz: **objetivo**, **escopo** (o que entra e o que fica de fora),
-**design** da feature, **critérios de aceite** e **testes**, mais o commit e as
-dependências no cabeçalho.
+Each spec has: **goal**, **scope** (what is in and what is out), the feature's
+**design**, **acceptance criteria** and **tests**, plus the commit and the
+dependencies in the header.
 
-A seção de escopo é a que mais evita retrabalho. Dizer o que *não* entra num
-commit é o que impede a feature de crescer enquanto está sendo escrita.
+The scope section is the one that prevents the most rework. Saying what is
+*not* in a commit is what stops the feature from growing while it is being
+written.
 
-Spec não é contrato: quando a implementação mostrar que ela estava errada, a
-spec é corrigida no mesmo commit que a contradiz. O que não se reescreve é
-[ADR](../adr/) aceito — esse se supera com um novo.
+A spec is not a contract: when the implementation shows it was wrong, the spec
+is corrected in the same commit that contradicts it. What is not rewritten is
+an accepted [ADR](../adr/) — that one is superseded by a new one.

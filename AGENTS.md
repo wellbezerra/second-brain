@@ -1,41 +1,41 @@
 # AGENTS.md
 
-**Brain** — CLI local que indexa um vault Obsidian e faz busca híbrida
-(FTS5 + vetores via Ollama), tudo em SQLite dentro do vault. Nada sai da
-máquina.
+**Brain** — a local CLI that indexes an Obsidian vault and runs hybrid search
+(FTS5 + vectors via Ollama), all in SQLite inside the vault. Nothing leaves the
+machine.
 
-- Produto: [docs/SPEC.md](docs/SPEC.md)
-- Decisões: [docs/adr/](docs/adr/)
-- Uma spec por feature: [docs/specs/](docs/specs/)
-- Ordem dos commits: [docs/ROADMAP.md](docs/ROADMAP.md)
-- Visão geral: [ARCHITECTURE.md](ARCHITECTURE.md)
+- Product: [docs/SPEC.md](docs/SPEC.md)
+- Decisions: [docs/adr/](docs/adr/)
+- One spec per feature: [docs/specs/](docs/specs/)
+- Commit order: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Overview: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## Stack
 
-Node 24 (`.nvmrc`), TypeScript estrito, ESM. `parseArgs` para a CLI, `fetch`
-para o Ollama, `better-sqlite3` + `sqlite-vec` para o índice, Vitest para
-testes ([ADR 011](docs/adr/011-node-typescript-como-runtime.md)).
+Node 24 (`.nvmrc`), strict TypeScript, ESM. `parseArgs` for the CLI, `fetch`
+for Ollama, `better-sqlite3` + `sqlite-vec` for the index, Vitest for tests
+([ADR 011](docs/adr/011-node-typescript-runtime.md)).
 
-## Comandos
+## Commands
 
 ```sh
 npm install
 npm test            # vitest
 npm run typecheck   # tsc --noEmit
-npm run build       # compila para dist/
-npm link            # registra `brain` no PATH
+npm run build       # compiles to dist/
+npm link            # puts `brain` on the PATH
 ```
 
-## Regras
+## Rules
 
-- **Uma feature, uma spec, um commit**, na ordem do ROADMAP. Antes do commit
-  da feature vem um commit com o teste que falha.
-- **Suíte verde ao fim de cada commit de feature.**
-- **Nenhum teste exige Ollama.** Use o `HashEmbedder` (spec 03).
-- **Nada abaixo de `src/cli.ts` imprime, lê stdin ou chama `process.exit`.**
-  A lógica devolve dados ou lança erros tipados.
-- **ADR aceito não se edita**: escreve-se um novo que o supera. Spec pode ser
-  corrigida no commit que a contradiz.
-- Docs, mensagens da CLI e mensagens de commit em **português**.
-- Testes usam diretórios temporários e configuração injetada
-  (`env`, `XDG_CONFIG_HOME`); nunca tocam a configuração real do usuário.
+- **One feature, one spec, one commit**, in ROADMAP order. Before the feature
+  commit comes a commit with the failing test.
+- **Green suite at the end of every feature commit.**
+- **No test requires Ollama.** Use `HashEmbedder` (spec 03).
+- **Nothing below `src/cli.ts` prints, reads stdin or calls `process.exit`.**
+  Logic returns data or throws typed errors.
+- **An accepted ADR is not edited**: a new one supersedes it. A spec may be
+  corrected in the commit that contradicts it.
+- Docs, CLI messages, code comments and commit messages are in **English**.
+- Tests use temporary directories and injected configuration
+  (`env`, `XDG_CONFIG_HOME`); they never touch the user's real configuration.
