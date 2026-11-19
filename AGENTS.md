@@ -39,7 +39,16 @@ npm link            # registra `brain` no PATH
   A lógica devolve dados ou lança erros tipados.
 - **ADR aceito não se edita**: escreve-se um novo que o supera. Spec pode ser
   corrigida no commit que a contradiz.
-- Docs, mensagens da CLI e mensagens de commit em **português**.
+- Docs e mensagens da CLI em **português**. Commits, títulos e descrições de
+  PR, issues e comentários de código em **inglês**
+  ([.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)); o PR é reprovado se
+  aparecer acento ou palavra comum do português.
+- **Conventional Commits** em commits e títulos de PR:
+  `type(scope): short description`, com `!` para mudança incompatível.
+- **Uma branch por mudança, criada a partir de `main`**, com o nome
+  `<type>/<kebab-case-description>` (`feat/`, `fix/`, `docs/`, `ci/`...).
+  Nunca commit direto em `main`; tudo entra por PR, que precisa de label,
+  Project e assignee. Cada merge em `main` gera uma release semver.
 - **Commits só com a conta Git do dono do repositório**: sem `Co-Authored-By`,
   sem rodapé de ferramenta. Push só quando pedido.
 - Testes usam diretórios temporários e configuração injetada
