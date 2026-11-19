@@ -2,7 +2,9 @@
 // Única camada que conhece parseArgs, stdout, stdin e process.exit.
 import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
-import { ConfigError, loadSettings, parseProvider } from "./config.js";
+import { ConfigError, loadConfig, loadSettings, parseProvider } from "./config.js";
+import { IndexError } from "./db.js";
+import { getStatus } from "./status.js";
 import { runDoctor } from "./doctor.js";
 import { EmbedError } from "./embed.js";
 import { API_KEY_VARS, createEmbedder } from "./embedders/index.js";
@@ -25,7 +27,11 @@ Configuração
             --model <nome>     modelo de embedding (padrão: o do provedor)
             --git              ativa o commit automático no vault
             --yes              cria a pasta do vault sem perguntar
-  doctor    verifica Node, provedor de embeddings, chave, modelo e vault
+  doctor    verifica Node, SQLite, provedor de embeddings, chave, modelo e vault
+            --vault <caminho>  --provider <nome>  --model <nome>
+
+Índice
+  status    mostra o índice e quantas notas mudaram desde a última indexação
             --vault <caminho>  --provider <nome>  --model <nome>
 
 Chaves de API só por variável de ambiente:
@@ -64,6 +70,8 @@ async function main(argv: string[]): Promise<number> {
       return runInit(argv.slice(argv.indexOf(command) + 1));
     case "doctor":
       return runDoctorCommand(argv.slice(argv.indexOf(command) + 1));
+    case "status":
+      return runStatusCommand(argv.slice(argv.indexOf(command) + 1));
     default:
       throw new UsageError(
         `Comando desconhecido: ${command}. Veja \`brain --help\`.`,
@@ -134,6 +142,68 @@ async function runDoctorCommand(argv: string[]): Promise<number> {
   return checks.some((c) => c.status === "fail") ? EXIT_DEPENDENCY : EXIT_OK;
 }
 
+async function runStatusCommand(argv: string[]): Promise<number> {
+  const { values } = parseArgs({
+    args: argv,
+    options: { vault: { type: "string" }, provider: { type: "string" }, model: { type: "string" } },
+  });
+  const config = loadConfig({
+    args: { vault: values.vault, provider: values.provider, model: values.model },
+  });
+  const s = getStatus({
+    vault: config.vault,
+    excludes: config.excludes,
+    configured: { provider: config.provider, model: config.model },
+  });
+
+  console.log(`Vault:             ${s.vault}`);
+  if (!s.exists) {
+    console.log(`Índice:            ainda não criado (${s.indexPath})`);
+  } else {
+    console.log(`Índice:            ${s.indexPath} (${formatBytes(s.sizeBytes)})`);
+  }
+  const configured = `${s.configured.provider} · ${s.configured.model}`;
+  if (!s.identity) {
+    console.log(`Embeddings:        ${configured} (definido na primeira indexação)`);
+  } else {
+    console.log(`Embeddings:        ${s.identity.provider} · ${s.identity.model} (${s.identity.dim} dimensões)`);
+    if (s.identityMismatch) {
+      console.log(`                   a configuração pede ${configured}: rode \`brain index --rebuild\``);
+    }
+  }
+  console.log(
+    `Notas e trechos:   ${plural(s.counts.files, "nota", "notas")}, ${plural(s.counts.chunks, "trecho", "trechos")}`,
+  );
+  console.log(`Última indexação:  ${s.lastIndexAt === undefined ? "nunca" : formatDate(s.lastIndexAt)}`);
+
+  const { new: added, changed, removed } = s.pending;
+  if (added + changed + removed === 0) {
+    console.log("Pendentes:         nenhuma — o índice reflete o disco");
+  } else {
+    console.log(
+      `Pendentes:         ${plural(added, "nova", "novas")}, ${plural(changed, "alterada", "alteradas")}, ` +
+        `${plural(removed, "removida", "removidas")} desde a última indexação`,
+    );
+    console.log("                   a busca ainda não vê essas mudanças: rode `brain index`");
+  }
+  for (const warning of s.warnings) console.error(`Aviso: ${warning}`);
+  return EXIT_OK;
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatDate(ms: number): string {
+  return new Date(ms).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
 async function confirmCreate(path: string): Promise<boolean> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -177,6 +247,11 @@ main(process.argv.slice(2)).then(
     ) {
       console.error(`Erro: ${(error as Error).message}`);
       process.exitCode = EXIT_USAGE;
+      return;
+    }
+    if (error instanceof IndexError) {
+      console.error(`Erro: ${error.message}`);
+      process.exitCode = error.kind === "extension" ? EXIT_DEPENDENCY : EXIT_USAGE;
       return;
     }
     if (error instanceof EmbedError) {

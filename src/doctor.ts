@@ -1,5 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { MISSING_VAULT_MESSAGE } from "./config.js";
+import { sqliteInfo } from "./db.js";
+import type { SqliteInfo } from "./db.js";
 import type { Settings } from "./config.js";
 import { EmbedError } from "./embed.js";
 import type { Embedder } from "./embed.js";
@@ -17,6 +19,8 @@ export interface DoctorInput {
   nodeVersion: string;
   settings: Settings;
   embedder: Embedder;
+  /** Injetável para teste; por padrão, o SQLite de verdade. */
+  sqlite?: () => SqliteInfo;
 }
 
 const MIN_NODE_MAJOR = 24;
@@ -27,12 +31,10 @@ const MIN_NODE_MAJOR = 24;
  *
  * Para provedores remotos, verificar custa um embedding de uma palavra: é o
  * único jeito de saber se a chave e o modelo funcionam (ADR 012).
- *
- * SQLite com FTS5 e sqlite-vec entram aqui junto com o índice (spec 04).
  */
 export async function runDoctor(input: DoctorInput): Promise<Check[]> {
   const { settings, embedder } = input;
-  const checks: Check[] = [checkNode(input.nodeVersion)];
+  const checks: Check[] = [checkNode(input.nodeVersion), ...checkSqlite((input.sqlite ?? sqliteInfo)())];
 
   const where = `${embedder.provider} · ${embedder.model} → ${embedder.endpoint}`;
   const problem = await embedder.health();
@@ -58,6 +60,23 @@ function checkNode(version: string): Check {
   return major >= MIN_NODE_MAJOR
     ? ok("node", version)
     : fail("node", `${version}; o Brain precisa do Node ${MIN_NODE_MAJOR} ou mais novo`);
+}
+
+function checkSqlite(info: SqliteInfo): Check[] {
+  const sqlite = info.fts5
+    ? ok("sqlite", `${info.version} com FTS5`)
+    : fail(
+        "sqlite",
+        `${info.version} sem FTS5: a busca por palavra-chave não funciona. Reinstale as dependências (npm install).`,
+      );
+  const vec =
+    "version" in info.vec
+      ? ok("sqlite-vec", info.vec.version)
+      : fail(
+          "sqlite-vec",
+          `não carregou: ${info.vec.error}\nConfira se o pacote sqlite-vec da sua plataforma foi instalado (npm install).`,
+        );
+  return [sqlite, vec];
 }
 
 function checkVault(vault: string | undefined): Check {

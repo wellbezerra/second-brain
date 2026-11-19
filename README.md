@@ -4,7 +4,7 @@ Segundo cérebro local: indexa um vault Obsidian e responde buscas híbridas
 (palavra-chave + significado) sobre ele. As notas e o índice ficam na sua
 máquina; os embeddings vêm de uma API à sua escolha.
 
-> Em construção. Hoje existem `brain init` e `brain doctor`; o resto chega
+> Em construção. Hoje existem `brain init`, `brain doctor` e `brain status`; o resto chega
 > commit a commit, na ordem do [roadmap](docs/ROADMAP.md).
 
 ## Pré-requisitos
@@ -44,6 +44,7 @@ brain --version
 export OPENAI_API_KEY=sk-...        # ou GEMINI_API_KEY / VOYAGE_API_KEY
 brain init --vault ~/Documentos/notas [--provider openai] [--model ...] [--git] [--yes]
 brain doctor
+brain status                        # índice e notas mudadas desde a última indexação
 ```
 
 O `init` cria `<vault>/.brain/`, acrescenta `.brain/` ao `.gitignore` se o
