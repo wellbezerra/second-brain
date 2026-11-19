@@ -62,6 +62,36 @@ describe("initVault", () => {
     expect(config.git).toBe(false);
   });
 
+  it("grava o provedor escolhido", () => {
+    const { vault, configFile } = setup();
+    mkdirSync(vault);
+    initVault({ vault, configFile, provider: "gemini" });
+    const config = readConfig(configFile);
+    expect(config.provider).toBe("gemini");
+    expect(config.model).toBe("gemini-embedding-2");
+  });
+
+  it("trocar de provedor sem dizer o modelo descarta o modelo antigo", () => {
+    const { vault, configFile } = setup();
+    mkdirSync(vault);
+    initVault({ vault, configFile, provider: "ollama", model: "nomic-embed-text" });
+    initVault({ vault, configFile, provider: "voyage" });
+    const config = readConfig(configFile);
+    expect(config.provider).toBe("voyage");
+    expect(config.model).toBe("voyage-4");
+    expect(readFileSync(configFile, "utf8")).not.toContain("nomic-embed-text");
+  });
+
+  it("rodar de novo sem provedor mantém provedor e modelo", () => {
+    const { vault, configFile } = setup();
+    mkdirSync(vault);
+    initVault({ vault, configFile, provider: "ollama", model: "nomic-embed-text" });
+    initVault({ vault, configFile });
+    const config = readConfig(configFile);
+    expect(config.provider).toBe("ollama");
+    expect(config.model).toBe("nomic-embed-text");
+  });
+
   it("grava git: true quando pedido", () => {
     const { vault, configFile } = setup();
     mkdirSync(vault);
