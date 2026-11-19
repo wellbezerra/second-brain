@@ -13,7 +13,9 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
   },
-  "include": ["src", "tests", "scripts", "*.ts"]
+  "include": ["src", "tests", "scripts", ".claude/hooks", "*.ts"]
 }

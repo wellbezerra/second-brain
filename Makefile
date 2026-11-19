@@ -3,8 +3,10 @@
 
 .PHONY: setup check-fast check-full dev build
 
+# Installs dependencies and points git at the committed hooks in scripts/hooks.
 setup:
 	npm install
+	git config core.hooksPath scripts/hooks
 
 check-fast:
 	npm run check:fast
