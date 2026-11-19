@@ -57,11 +57,27 @@ export function expandPath(path: string): string {
   return resolve(path);
 }
 
+/** Configuração em que o vault pode faltar — para quem diagnostica, como o `brain doctor`. */
+export type Settings = Omit<Config, "vault"> & { vault?: string };
+
+export const MISSING_VAULT_MESSAGE =
+  "Nenhum vault configurado. Resolva de uma destas formas:\n" +
+  "  - rode `brain init --vault <caminho>` para gravar a configuração;\n" +
+  "  - passe `--vault <caminho>` no comando;\n" +
+  "  - defina a variável de ambiente BRAIN_VAULT.";
+
 /**
  * Carrega a configuração. Precedência: argumento > ambiente > arquivo > padrão.
  * Lança `ConfigError` se o arquivo for inválido ou se não houver vault.
  */
 export function loadConfig(options: LoadOptions = {}): Config {
+  const settings = loadSettings(options);
+  if (settings.vault === undefined) throw new ConfigError(MISSING_VAULT_MESSAGE);
+  return { ...settings, vault: settings.vault };
+}
+
+/** Como `loadConfig`, mas sem exigir vault. */
+export function loadSettings(options: LoadOptions = {}): Settings {
   const args = options.args ?? {};
   const env = options.env ?? process.env;
   const file = options.file ?? configPath(env);
@@ -69,17 +85,9 @@ export function loadConfig(options: LoadOptions = {}): Config {
 
   const vault =
     nonEmpty(args.vault) ?? nonEmpty(env.BRAIN_VAULT) ?? nonEmpty(stored.vault);
-  if (vault === undefined) {
-    throw new ConfigError(
-      "Nenhum vault configurado. Resolva de uma destas formas:\n" +
-        "  - rode `brain init --vault <caminho>` para gravar a configuração;\n" +
-        "  - passe `--vault <caminho>` no comando;\n" +
-        "  - defina a variável de ambiente BRAIN_VAULT.",
-    );
-  }
 
   return {
-    vault: expandPath(vault),
+    ...(vault === undefined ? {} : { vault: expandPath(vault) }),
     model:
       nonEmpty(args.model) ??
       nonEmpty(env.BRAIN_MODEL) ??
