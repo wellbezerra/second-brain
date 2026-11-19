@@ -105,7 +105,7 @@ errors.
 
 ## Tests
 
-A temporary vault manipulated by the test and a `HashEmbedder` instrumented to
+A temporary vault manipulated by the test and a `FakeEmbedder` instrumented to
 count calls.
 
 The test that matters most is the second run: index, index again, assert that

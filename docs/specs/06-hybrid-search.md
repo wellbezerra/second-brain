@@ -93,7 +93,7 @@ another tool.
 
 - Searching for a literal term present in a note finds the note.
 - Searching for a paraphrase, with no term in common, finds the note (with a
-  real model; does not apply with `HashEmbedder`).
+  real model; does not apply with `FakeEmbedder`).
 - A query with `"`, `*`, `-` or `C++` does not break.
 - A query with no result returns an empty list and a clear message, not an
   error.
@@ -104,7 +104,7 @@ another tool.
 
 ## Tests
 
-With `HashEmbedder`, the semantic side cannot really be evaluated — so the tests
+With `FakeEmbedder`, the semantic side cannot really be evaluated — so the tests
 split:
 
 - **Fusion unit tests**, with synthetic lists: a document in both lists beats

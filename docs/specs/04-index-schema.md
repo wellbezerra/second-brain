@@ -137,7 +137,7 @@ the last indexing, not for the disk.
 
 ## Tests
 
-A database in a temporary file and `HashEmbedder`. Insert, delete and check that
+A database in a temporary file and `FakeEmbedder`. Insert, delete and check that
 the counts of the three tables match at each step. An explicit test of the
 invariant: after a sequence of inserts and deletes, the set of ids in `chunks`,
 `chunks_fts` and `chunks_vec` is identical.

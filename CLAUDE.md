@@ -18,25 +18,35 @@ Node 24, strict TypeScript, ESM, Biome (lint + format), Vitest
 
 ```sh
 make setup        # install dependencies and the git hooks (core.hooksPath)
-make check-fast   # Biome, tsc, unit tests — seconds; your inner loop
-make check-full   # check-fast + integration tests + retrieval evals
+make check-fast   # Biome, tsc, test-layer check, unit tests — seconds; your inner loop
+make check-full   # check-fast + integration tests + retrieval evals, under a lock
 make dev          # unit tests in watch mode
 ```
 
 The Makefile only wraps the npm scripts in `package.json`; if `make` is missing
 (Windows: `winget install ezwinports.make`), run `npm run check:fast` and so on.
 Two levels on purpose: [ADR 013](docs/adr/013-two-level-verification-gate.md).
+`check-full` holds a machine-wide lock; if another run holds it, yours prints
+its queue position and waits — do not start a second one to "speed things up".
 
 ## Module map
 
 - `src/cli.ts` — the only module that prints, reads stdin or calls `process.exit`
 - `src/commands.ts` — turns argv into a command; pure
+- `src/embedding/` — `Embedder` contract, `FakeEmbedder` (hash-based, no
+  network; the default in tests and CI), `OllamaEmbedder` (real, local)
 - `scripts/hooks/` — git hooks: pre-commit (size, secrets, `.env`, format,
   no commit on main) and pre-push (no push to main, `check-fast`)
+- `scripts/run-locked.ts` — the `check-full` lock and queue
+- `scripts/check-test-layers.ts` — fails `check-fast` if a unit test imports
+  the file system, network, child processes or a database
 - `.claude/hooks/` — Claude Code hooks: write guard, format-on-edit, session
   log in `.harness/sessions/` (git-ignored)
 - `tests/unit/` — unit tests, run by `check-fast`
-- `tests/integration/` — integration tests, run by `check-full` only
+- `tests/integration/` — integration tests, run by `check-full` only; tests
+  that need Ollama skip themselves in CI and when Ollama is not reachable
+- `tests/fixtures/vault/` — the only vault tests ever see; the vault guard in
+  `tests/setup/` fails the run if `SECOND_BRAIN_VAULT` leaves the repository
 
 Nothing below `src/cli.ts` does I/O with the terminal: logic returns data or
 throws typed errors.

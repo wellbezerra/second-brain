@@ -48,14 +48,14 @@ remembered by the instance.
 **Timeout.** 5s to connect, 120s to respond. The first call after
 `ollama serve` loads the model into memory and is slow.
 
-## `HashEmbedder`
+## `FakeEmbedder`
 
 A deterministic embedder with no network, for tests: it projects each token onto
 a dimension by hashing and normalises. It does not understand semantics, but it
 is consistent and texts sharing words end up close — enough to exercise
 indexing, search and fusion.
 
-It needs a low dimension (64) and a hash that is stable between runs, which in
+It needs a low dimension (256) and a hash that is stable between runs, which in
 Python means not using `str`'s `hash()` with a random `PYTHONHASHSEED`; use
 `hashlib` and derive the index from it.
 
@@ -90,7 +90,7 @@ that answers it in two seconds.
 - A 404 on `/api/embed` falls back to `/api/embeddings` and returns the same
   shape.
 - Ollama being down produces the guiding message, not an `httpx` traceback.
-- `HashEmbedder` returns the same vector for the same text across processes.
+- `FakeEmbedder` returns the same vector for the same text across processes.
 - `brain doctor` runs and reports without Ollama, marking only that item as
   failed.
 

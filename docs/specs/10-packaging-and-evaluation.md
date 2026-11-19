@@ -83,7 +83,7 @@ of impressions. Without it, every adjustment is a guess.
 
 GitHub Actions running `pytest` and type checking on each push.
 
-The whole suite runs with `HashEmbedder` and does not require Ollama — which has
+The whole suite runs with `FakeEmbedder` and does not require Ollama — which has
 been a requirement since [spec 03](03-local-embeddings.md), and is what makes CI
 possible. `brain eval` needs a real model, so it runs by hand, not in CI.
 
