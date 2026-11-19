@@ -1,40 +1,81 @@
-# Spec 03 — Embeddings locais
+# Spec 03 — Embeddings
 
-**Commit:** `feat: embeddings locais via Ollama`
+**Commits:** `feat: embeddings locais via Ollama` e, depois,
+`feat: embeddings por API (OpenAI, Gemini e Voyage)`
 **Depende de:** [01](01-esqueleto-e-configuracao.md)
-**Decisão de referência:** [ADR 003](../adr/003-embeddings-locais-com-ollama.md)
+**Decisões de referência:** [ADR 012](../adr/012-embeddings-por-api-com-provedor-configuravel.md),
+que supera o [ADR 003](../adr/003-embeddings-locais-com-ollama.md)
 
 ## Objetivo
 
-Transformar uma lista de textos numa lista de vetores, falando com o Ollama em
-localhost. Junto disso, um embedder falso que permita testar todo o resto do
-projeto sem Ollama instalado.
+Transformar uma lista de textos numa lista de vetores, falando com o provedor
+de embeddings configurado — OpenAI, Gemini, Voyage ou Ollama. Junto disso, um
+embedder falso que permita testar todo o resto do projeto sem rede.
 
 ## Escopo
 
-**Entra:** protocolo `Embedder`, cliente Ollama, embedder determinístico para
-testes, diagnóstico (`brain doctor`).
+**Entra:** protocolo `Embedder`, um cliente por provedor, escolha do
+provedor pela configuração, embedder determinístico para testes, diagnóstico
+(`brain doctor`).
 
 **Fica de fora:** persistir vetor (spec 04), decidir o que embeddar (spec 05).
 
 ## O protocolo
 
 ```ts
+type EmbedPurpose = "document" | "query";
+
 interface Embedder {
-  embed(texts: readonly string[]): Promise<number[][]>;
+  readonly provider: string;      // "openai", "gemini", "voyage", "ollama", "hash"
+  readonly model: string;
+  embed(texts: readonly string[], purpose?: EmbedPurpose): Promise<number[][]>;
   health(): Promise<string>;      // "" quando está tudo certo
   readonly dim: number | undefined; // undefined até o primeiro embedding
   dimension(): Promise<number>;   // descobre a dimensão se ainda não souber
 }
 ```
 
-Em `src/embed.ts`, junto com `OllamaEmbedder`, `EmbedError` (com um `kind`
-por situação da tabela de erros) e `normalize`. O `HashEmbedder` fica em
+`purpose` é `"document"` por padrão (indexação); a busca passa `"query"`.
+Voyage e Gemini embeddam os dois de forma diferente; OpenAI e Ollama ignoram.
+
+Em `src/embed.ts` ficam a interface, `EmbedError` (com um `kind` por
+situação da tabela de erros), `normalize` e `createEmbedder`, que escolhe o
+cliente pela configuração. Os clientes ficam em `src/embedders/`, um arquivo
+por provedor, com o que é comum a eles (timeout, erros HTTP, novas
+tentativas) em `src/embedders/http.ts`. O `HashEmbedder` fica em
 `src/hash-embedder.ts`.
 
-Todo o resto do projeto depende deste protocolo, nunca do Ollama diretamente.
-É o que permite trocar por uma API externa depois sem tocar no indexador, e o
-que torna os testes independentes de rede.
+Todo o resto do projeto depende deste protocolo, nunca de um provedor. É o que
+torna a troca de provedor uma linha de configuração, e os testes
+independentes de rede.
+
+## Provedores
+
+| `provider` | Endpoint | Modelo padrão | Dim. | Chave | Lote |
+|---|---|---|---|---|---|
+| `openai` (padrão) | `POST https://api.openai.com/v1/embeddings` | `text-embedding-3-small` | 1536 | `OPENAI_API_KEY` | 100 |
+| `gemini` | `POST …/v1beta/models/<m>:batchEmbedContents` | `gemini-embedding-2` | 3072 | `GEMINI_API_KEY` | 100 |
+| `voyage` | `POST https://ai.mongodb.com/v1/embeddings` | `voyage-4` | 1024 | `VOYAGE_API_KEY` | 100 |
+| `ollama` | `POST <ollama_url>/api/embed` | `bge-m3` | 1024 | — | 32 |
+
+- **Escolha:** `--provider` > `BRAIN_PROVIDER` > campo `provider` do
+  `config.json` > `openai`. O modelo segue a mesma precedência; sem ele, vale
+  o padrão do provedor escolhido.
+- **Chave:** só por variável de ambiente. Nunca é gravada no `config.json` nem
+  aparece em mensagem de erro. Sem a chave, o erro diz qual variável definir.
+- **Gemini:** `gemini-embedding-2` não aceita `taskType`; o propósito vai no
+  texto, como a documentação do Google pede: `task: search result | query: …`
+  para consulta e `title: none | text: …` para documento. Modelos anteriores
+  (`gemini-embedding-001`) recebem `taskType` `RETRIEVAL_QUERY` /
+  `RETRIEVAL_DOCUMENT`. Chave no cabeçalho `x-goog-api-key`.
+- **Voyage:** `input_type` `query` / `document`. Chaves da plataforma antiga da
+  Voyage usam `https://api.voyageai.com/v1`; `VOYAGE_BASE_URL` troca o
+  endereço.
+- **Novas tentativas:** 429 e 5xx são tentados mais duas vezes, esperando 1s e
+  depois 2s, ou o que o `retry-after` pedir (até 30s). Depois disso, erro.
+- **Timeout:** 120s por requisição, como no Ollama.
+- Todos os vetores passam por `normalize`, mesmo quando o provedor já
+  normaliza: custa nada e mantém a garantia independente do provedor.
 
 ## `OllamaEmbedder`
 
@@ -84,12 +125,25 @@ mensagem própria:
 | Modelo não baixado | `o modelo '<m>' não está baixado. Rode: ollama pull <m>` |
 | Resposta com contagem errada | `o Ollama devolveu N vetores para M textos` |
 | Timeout | `o Ollama não respondeu em 120s. Modelo grande demais para esta máquina?` |
+| Chave ausente (API) | `defina a variável OPENAI_API_KEY com a sua chave da OpenAI` |
+| Chave recusada (401/403) | `a OpenAI recusou a chave em OPENAI_API_KEY. Confira se ela está certa e ativa` |
+| Modelo inexistente (404) | `a OpenAI não conhece o modelo 'x'. Confira --model` |
+| Limite de uso (429) | `a OpenAI limitou as requisições (429) mesmo depois de 3 tentativas. Espere um pouco e rode de novo` |
+| Fora do ar (5xx / rede) | `não consegui falar com a OpenAI (api.openai.com). Verifique a conexão` |
+
+Os textos dos outros provedores são os mesmos, trocando o nome.
 
 ## `brain doctor`
 
 Comando de diagnóstico que verifica, em ordem, e imprime um `✓` ou `✗` por
-item: Node e versão (24 ou mais); Ollama respondendo; modelo configurado
-disponível; dimensão que o modelo gera; vault configurado e existente.
+item: Node e versão (24 ou mais); provedor configurado respondendo, com a
+chave e o modelo aceitos (para o Ollama, também se o modelo está baixado);
+dimensão que o modelo gera; vault configurado e existente. O item do
+provedor diz para onde os trechos vão (`api.openai.com`, por exemplo), para
+que isso nunca seja surpresa.
+
+Para os provedores remotos, verificar custa um embedding de uma palavra — o
+único jeito de saber se a chave e o modelo funcionam.
 Um item que depende de outro que falhou é marcado `–` (pulado), não `✗`.
 Sai com código 3 se algum item falhar (tabela da spec 10).
 
@@ -113,6 +167,11 @@ que responde isso em dois segundos.
 - Ollama fora do ar produz a mensagem orientada, não um `TypeError: fetch failed`.
 - `HashEmbedder` dá o mesmo vetor para o mesmo texto em processos diferentes.
 - `brain doctor` roda e relata sem o Ollama, marcando só aquele item como falho.
+- Com `provider: openai` e sem `OPENAI_API_KEY`, nada é enviado e a mensagem
+  diz qual variável definir.
+- A chave nunca aparece em mensagem de erro, mesmo que o provedor a devolva.
+- Consulta e documento chegam ao Gemini e à Voyage no formato de cada um.
+- 429 seguido de 200 devolve os vetores; três 429 seguidos dão o erro de limite.
 
 ## Testes
 

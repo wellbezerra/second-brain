@@ -1,6 +1,6 @@
 # ADR 003 — Embeddings locais via Ollama
 
-**Status:** aceita · 2026-11-19
+**Status:** superada por [012](012-embeddings-por-api-com-provedor-configuravel.md) · 2026-11-19
 
 ## Contexto
 
