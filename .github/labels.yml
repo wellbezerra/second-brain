@@ -1,0 +1,39 @@
+- name: feature
+  color: 0e8a16
+  description: New functionality
+- name: fix
+  color: d93f0b
+  description: Bug fix
+- name: bug
+  color: b60205
+  description: Something is not working
+- name: hotfix
+  color: e11d21
+  description: Urgent production fix
+- name: chore
+  color: c5def5
+  description: Maintenance, tooling, dependencies
+- name: docs
+  color: 0075ca
+  description: Documentation only
+- name: refactor
+  color: fbca04
+  description: Code change without behavior change
+- name: test
+  color: bfdadc
+  description: Tests
+- name: ci
+  color: 5319e7
+  description: CI/CD and workflows
+- name: performance
+  color: f9d0c4
+  description: Performance improvement
+- name: build
+  color: d4c5f9
+  description: Build system or dependencies
+- name: style
+  color: ededed
+  description: Formatting, no logic change
+- name: breaking
+  color: 000000
+  description: Breaking change (major release)

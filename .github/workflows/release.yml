@@ -1,0 +1,77 @@
+name: Release
+
+# Every merge into main creates a new GitHub Release (semver, auto-bumped).
+#   breaking label or "!" in the PR title -> major
+#   feature label  or "feat" title        -> minor
+#   anything else                         -> patch
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # Skip if this commit is already tagged
+          if git tag --points-at "$SHA" | grep -q '^v'; then
+            echo "Commit already tagged, nothing to do."
+            exit 0
+          fi
+
+          # PR that produced this commit (if any)
+          PR_JSON=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0] // empty')
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number // empty')
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title // empty')
+          PR_LABELS=$(echo "$PR_JSON" | jq -r '[.labels[].name] | join(",")')
+
+          # Bump type
+          BUMP=patch
+          if [[ "$PR_LABELS" == *breaking* || "$PR_TITLE" =~ ^[a-z]+(\(.+\))?!: ]]; then
+            BUMP=major
+          elif [[ "$PR_LABELS" == *feature* || "$PR_TITLE" =~ ^feat(\(.+\))?: ]]; then
+            BUMP=minor
+          fi
+
+          # Latest version tag (default v0.0.0)
+          LAST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          LAST=${LAST:-v0.0.0}
+          IFS='.' read -r MAJ MIN PAT <<< "${LAST#v}"
+
+          case "$BUMP" in
+            major) MAJ=$((MAJ+1)); MIN=0; PAT=0 ;;
+            minor) MIN=$((MIN+1)); PAT=0 ;;
+            patch) PAT=$((PAT+1)) ;;
+          esac
+          NEXT="v${MAJ}.${MIN}.${PAT}"
+          echo "Last: $LAST | bump: $BUMP | next: $NEXT"
+
+          TITLE="$NEXT"
+          [[ -n "$PR_TITLE" ]] && TITLE="$NEXT - $PR_TITLE"
+
+          gh release create "$NEXT" \
+            --target "$SHA" \
+            --title "$TITLE" \
+            --generate-notes \
+            --notes-start-tag "$LAST" 2>/dev/null \
+          || gh release create "$NEXT" --target "$SHA" --title "$TITLE" --generate-notes
