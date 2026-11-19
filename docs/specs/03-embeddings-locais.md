@@ -61,6 +61,11 @@ independentes de rede.
 - **Escolha:** `--provider` > `BRAIN_PROVIDER` > campo `provider` do
   `config.json` > `openai`. O modelo segue a mesma precedência; sem ele, vale
   o padrão do provedor escolhido.
+- **Modelo ao trocar de provedor:** o `model` gravado no arquivo pertence ao
+  `provider` gravado. Se `--provider` ou `BRAIN_PROVIDER` escolhem outro, o
+  modelo do arquivo é ignorado e vale o padrão do novo provedor — senão um
+  `bge-m3` iria parar na OpenAI. Pelo mesmo motivo, `brain init --provider`
+  com outro provedor e sem `--model` apaga o modelo antigo do arquivo.
 - **Chave:** só por variável de ambiente. Nunca é gravada no `config.json` nem
   aparece em mensagem de erro. Sem a chave, o erro diz qual variável definir.
 - **Gemini:** `gemini-embedding-2` não aceita `taskType`; o propósito vai no

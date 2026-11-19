@@ -13,6 +13,9 @@ const DIM = 64;
  * mudança deliberada.
  */
 export class HashEmbedder implements Embedder {
+  readonly provider = "hash";
+  readonly model = `hash-${DIM}`;
+  readonly endpoint = "local";
   readonly dim = DIM;
 
   async embed(texts: readonly string[]): Promise<number[][]> {

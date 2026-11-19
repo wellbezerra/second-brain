@@ -1,7 +1,8 @@
 # Brain
 
 Segundo cérebro local: indexa um vault Obsidian e responde buscas híbridas
-(palavra-chave + significado) sobre ele, sem mandar nada para fora da máquina.
+(palavra-chave + significado) sobre ele. As notas e o índice ficam na sua
+máquina; os embeddings vêm de uma API à sua escolha.
 
 > Em construção. Hoje existem `brain init` e `brain doctor`; o resto chega
 > commit a commit, na ordem do [roadmap](docs/ROADMAP.md).
@@ -9,10 +10,23 @@ Segundo cérebro local: indexa um vault Obsidian e responde buscas híbridas
 ## Pré-requisitos
 
 - **Node.js 24** (veja `.nvmrc`).
-- **Ollama** instalado e rodando (`ollama serve`), com o modelo baixado:
-  `ollama pull bge-m3`.
+- **Uma chave de API de embeddings**, em variável de ambiente:
+
+  | Provedor | `--provider` | Variável | Modelo padrão |
+  |---|---|---|---|
+  | OpenAI | `openai` (padrão) | `OPENAI_API_KEY` | `text-embedding-3-small` |
+  | Google Gemini | `gemini` | `GEMINI_API_KEY` | `gemini-embedding-2` |
+  | Voyage AI | `voyage` | `VOYAGE_API_KEY` | `voyage-4` |
+  | Ollama (local) | `ollama` | — | `bge-m3` |
+
+  O Claude não tem modelo de embedding; a Anthropic indica a Voyage AI.
+  A chave **nunca** vai para o arquivo de configuração.
 
 O `brain doctor` verifica tudo isso e diz o que falta.
+
+> **Privacidade:** com um provedor de API, o texto dos trechos das notas (na
+> indexação) e as consultas (na busca) são enviados a ele. Só o Ollama mantém
+> tudo na máquina. Veja o [ADR 012](docs/adr/012-embeddings-por-api-com-provedor-configuravel.md).
 
 ## Instalação
 
@@ -27,7 +41,9 @@ brain --version
 ## Uso
 
 ```sh
-brain init --vault ~/Documentos/notas [--model bge-m3] [--git] [--yes]
+export OPENAI_API_KEY=sk-...        # ou GEMINI_API_KEY / VOYAGE_API_KEY
+brain init --vault ~/Documentos/notas [--provider openai] [--model ...] [--git] [--yes]
+brain doctor
 ```
 
 O `init` cria `<vault>/.brain/`, acrescenta `.brain/` ao `.gitignore` se o
@@ -36,13 +52,13 @@ vault for um repositório Git, e grava a configuração em
 não existir, ele pergunta antes de criar.
 
 A configuração pode ser sobreposta por variável de ambiente (`BRAIN_VAULT`,
-`BRAIN_MODEL`, `BRAIN_OLLAMA_URL`) ou por argumento (`--vault`, `--model`),
-nessa ordem crescente de prioridade.
+`BRAIN_PROVIDER`, `BRAIN_MODEL`, `BRAIN_OLLAMA_URL`) ou por argumento
+(`--vault`, `--provider`, `--model`), nessa ordem crescente de prioridade.
 
 ## Desenvolvimento
 
 ```sh
-npm test            # vitest
+npm test            # vitest; nenhum teste usa rede
 npm run typecheck   # tsc --noEmit
 ```
 
