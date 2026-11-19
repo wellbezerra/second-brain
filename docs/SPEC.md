@@ -25,7 +25,10 @@ Uma CLI que indexa um vault Obsidian e responde buscas híbridas sobre ele.
 - As notas continuam sendo arquivos Markdown numa pasta. O Obsidian segue
   funcionando normalmente, sem plugin nenhum.
 - O índice é um arquivo SQLite dentro do vault, derivado e descartável.
-- Os embeddings são gerados localmente pelo Ollama. Nada sai da máquina.
+- Os embeddings vêm de uma API — OpenAI, Gemini ou Voyage, à escolha — ou
+  do Ollama local ([ADR 012](adr/012-embeddings-por-api-com-provedor-configuravel.md)).
+  O índice e as notas ficam na máquina; o texto dos trechos e as consultas
+  vão ao provedor de embeddings escolhido.
 - A busca combina FTS5 e similaridade vetorial e devolve uma lista única.
 
 ## O que o Brain não é
@@ -63,7 +66,8 @@ Diario/2026-11-19.md
 
 ## Arquitetura
 
-Tudo roda em processo, sem daemon e sem rede externa.
+Tudo roda em processo, sem daemon. A única rede externa é a chamada ao
+provedor de embeddings.
 
 ```
          ┌──────────────┐
@@ -72,7 +76,7 @@ Tudo roda em processo, sem daemon e sem rede externa.
                 │ leitura + hash
                 ▼
          ┌──────────────┐        ┌──────────────┐
-         │   indexador  │───────▶│    Ollama    │  embeddings locais
+         │   indexador  │───────▶│  embeddings  │  OpenAI · Gemini · Voyage · Ollama
          └──────┬───────┘        └──────────────┘
                 │ trechos + vetores
                 ▼
@@ -111,9 +115,9 @@ apagar e reindexar.
 | Indexação incremental | Vault de 2.000 notas sem alterações reindexa em menos de 2s |
 | Latência de busca | Menos de 300ms para um vault de 2.000 notas, embedding da query incluído |
 | Consistência | Após `brain index`, as duas buscas refletem o disco. Não há indexação assíncrona |
-| Custo | R$ 0 recorrente |
-| Rede | Só localhost. O projeto deve funcionar com a máquina offline |
-| Dependências | Node 24, better-sqlite3 (SQLite com FTS5), sqlite-vec, Ollama. Nada mais ([ADR 011](adr/011-node-typescript-como-runtime.md)) |
+| Custo | Só o do provedor de embeddings, por token; reindexação incremental reenvia apenas o que mudou |
+| Rede | Só o provedor de embeddings. Offline, a busca por palavra-chave continua funcionando |
+| Dependências | Node 24, better-sqlite3 (SQLite com FTS5), sqlite-vec e um provedor de embeddings. Nada mais ([ADR 011](adr/011-node-typescript-como-runtime.md)) |
 
 ## Decisões registradas
 
@@ -121,7 +125,7 @@ apagar e reindexar.
 |---|---|
 | [001](adr/001-cli-local-em-vez-de-mcp.md) | CLI local no lugar de servidor MCP |
 | [002](adr/002-vault-como-fonte-de-verdade.md) | O vault em disco é a fonte de verdade |
-| [003](adr/003-embeddings-locais-com-ollama.md) | Embeddings locais via Ollama |
+| [003](adr/003-embeddings-locais-com-ollama.md) | Embeddings locais via Ollama (superada por 012) |
 | [004](adr/004-sqlite-unico-para-o-indice.md) | Um SQLite para manifesto, FTS5 e vetores |
 | [005](adr/005-busca-hibrida-com-rrf.md) | Busca híbrida fundida por RRF |
 | [006](adr/006-indexacao-incremental-por-hash.md) | Indexação incremental por hash |
@@ -130,3 +134,4 @@ apagar e reindexar.
 | [009](adr/009-reconciliacao-sob-demanda.md) | Reconciliação sob demanda, sem daemon |
 | [010](adr/010-git-opcional-e-explicito.md) | Git opcional e explícito |
 | [011](adr/011-node-typescript-como-runtime.md) | Node.js e TypeScript como runtime |
+| [012](adr/012-embeddings-por-api-com-provedor-configuravel.md) | Embeddings por API, com provedor configurável |

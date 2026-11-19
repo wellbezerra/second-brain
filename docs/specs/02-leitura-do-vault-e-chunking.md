@@ -22,8 +22,9 @@ caminho de headings.
 
 ## Módulos
 
-- `vault.py` — varrer o vault, ler uma nota, extrair título.
-- `chunk.py` — quebrar o texto em trechos.
+- `vault.ts` — varrer o vault, ler uma nota, extrair título.
+- `chunk.ts` — quebrar o texto em trechos.
+- `markdown.ts` — o que os dois compartilham: cercas de código e headings.
 
 ## Varredura
 
@@ -36,6 +37,14 @@ Percorre o vault recursivamente atrás de `.md`. Pula:
 
 Devolve caminhos **relativos à raiz do vault**, em ordem estável. O manifesto
 guarda caminho relativo para que mover o vault não invalide o índice.
+
+O separador é sempre `/`, inclusive no Windows, e a ordem é por unidade de
+código (não por locale) — assim o mesmo vault produz o mesmo manifesto em
+qualquer máquina. A extensão `.md` é reconhecida sem diferenciar maiúsculas.
+Uma exclusão casa com o nome da pasta em qualquer profundidade ou com o
+caminho relativo inteiro (`Arquivo/Velho`).
+
+Ao ler, BOM é removido e `\r\n` vira `\n`.
 
 ## Título da nota
 
@@ -70,9 +79,20 @@ Algoritmo:
 3. Cada seção vira um ou mais trechos:
    - abaixo do alvo: um trecho;
    - acima: reparte por parágrafo, com sobreposição;
-   - parágrafo que sozinho estoura o alvo: reparte por sentença.
+   - parágrafo que sozinho estoura o alvo: reparte por sentença;
+   - bloco de código conta como um parágrafo, e nunca é repartido por
+     sentença (um `.` em código não termina nada);
+   - sentença ou bloco que ainda estoura: corta no espaço — de preferência
+     numa quebra de linha — mais próximo do alvo, e só no meio de uma palavra
+     se não houver espaço nenhum.
+
+   Com isso nenhum trecho passa de 1.200 caracteres. A sobreposição é a cauda
+   do trecho anterior, começando no início de uma palavra, e encolhe quando o
+   pedaço seguinte não deixaria espaço para ela.
 4. Monta o heading final como `título > h1 > h2 > ...`, descartando níveis
-   vazios (uma nota que pula de `#` para `###`).
+   vazios (uma nota que pula de `#` para `###`). Se o primeiro nível é igual
+   ao título — o caso comum, em que o título veio do próprio `#` —, ele não
+   se repete: `Diário > Ação`, não `Diário > Diário > Ação`.
 5. Descarta trechos abaixo do mínimo, **exceto** quando a nota não geraria
    nenhum trecho — nota curta precisa continuar buscável.
 

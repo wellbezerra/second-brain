@@ -1,0 +1,35 @@
+{
+  "name": "brain",
+  "version": "0.1.0",
+  "description": "Segundo cérebro local: busca híbrida sobre um vault Obsidian",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "brain": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.2.0",
+    "sqlite-vec": "^0.1.9"
+  },
+  "allowScripts": {
+    "better-sqlite3": false
+  }
+}

@@ -11,7 +11,7 @@ decisões em [docs/adr/](docs/adr/), ordem de construção em [docs/ROADMAP.md](
                 │ leitura + hash
                 ▼
          ┌──────────────┐        ┌──────────────┐
-         │   indexador  │───────▶│    Ollama    │  embeddings locais
+         │   indexador  │───────▶│  embeddings  │  OpenAI · Gemini · Voyage · Ollama
          └──────┬───────┘        └──────────────┘
                 │ trechos + vetores
                 ▼
@@ -30,7 +30,7 @@ decisões em [docs/adr/](docs/adr/), ordem de construção em [docs/ROADMAP.md](
 |---|---|---|
 | Interface | CLI local, sem servidor | [ADR 001](docs/adr/001-cli-local-em-vez-de-mcp.md) |
 | Fonte de verdade | Arquivos Markdown do vault | [ADR 002](docs/adr/002-vault-como-fonte-de-verdade.md) |
-| Embeddings | Ollama local (`bge-m3`) | [ADR 003](docs/adr/003-embeddings-locais-com-ollama.md) |
+| Embeddings | API configurável: OpenAI (padrão), Gemini, Voyage ou Ollama | [ADR 012](docs/adr/012-embeddings-por-api-com-provedor-configuravel.md) |
 | Índice | Um SQLite: manifesto, FTS5 e `sqlite-vec` | [ADR 004](docs/adr/004-sqlite-unico-para-o-indice.md) |
 | Busca | Híbrida, fundida por RRF | [ADR 005](docs/adr/005-busca-hibrida-com-rrf.md) |
 | Indexação | Incremental por hash | [ADR 006](docs/adr/006-indexacao-incremental-por-hash.md) |
@@ -55,9 +55,19 @@ src/
   config.ts     carga da configuração (argumento > ambiente > arquivo > padrão)
   init.ts       preparação do vault (`brain init`)
   version.ts    versão lida do package.json
-tests/          Vitest; nenhum teste exige Ollama
+  vault.ts      varredura do vault, leitura de nota, frontmatter e título
+  chunk.ts      quebra em trechos guiada por headings (ADR 008)
+  markdown.ts   cercas de código e headings, usados por vault e chunk
+  embed.ts      interface Embedder, EmbedError, normalize (ADR 012)
+  embedders/    um cliente por provedor: openai, gemini, voyage, ollama;
+                http.ts (timeout, novas tentativas, erros) e index.ts (escolha)
+  hash-embedder.ts  embedder determinístico para testes, sem rede
+  db.ts         o índice: esquema, identidade do modelo, escrita nas três tabelas
+  status.ts     estado do índice e notas pendentes (`brain status`)
+  doctor.ts     diagnóstico dos pré-requisitos (`brain doctor`)
+tests/          Vitest; nenhum teste usa rede
 docs/           SPEC, ADRs, specs e roadmap
 ```
 
-Os módulos de vault, embeddings, índice, busca, notas, reconciliação e Git
+Os módulos de busca, notas, reconciliação e Git
 entram um por commit, seguindo o roadmap.
