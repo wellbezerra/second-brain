@@ -45,10 +45,13 @@ npm link            # registra `brain` no PATH
   aparecer acento ou palavra comum do português.
 - **Conventional Commits** em commits e títulos de PR:
   `type(scope): short description`, com `!` para mudança incompatível.
-- **Uma branch por mudança, criada a partir de `main`**, com o nome
-  `<type>/<kebab-case-description>` (`feat/`, `fix/`, `docs/`, `ci/`...).
-  Nunca commit direto em `main`; tudo entra por PR, que precisa de label,
-  Project e assignee. Cada merge em `main` gera uma release semver.
+- **Uma branch por mudança, criada a partir de `develop`**, com o nome
+  `<type>/<kebab-case-description>` (`feat/`, `fix/`, `docs/`, `ci/`...),
+  e **PR sempre para `develop`**. Todo PR precisa de label, Project e
+  assignee. Nunca commit direto em `develop` nem em `main`.
+- **`main` é produção**: só recebe PR de `develop`, aberto manualmente pelo
+  dono. Nunca abrir PR de feature para `main`. Cada merge em `main` gera
+  uma release semver.
 - **Commits só com a conta Git do dono do repositório**: sem `Co-Authored-By`,
   sem rodapé de ferramenta. Push só quando pedido.
 - Testes usam diretórios temporários e configuração injetada
