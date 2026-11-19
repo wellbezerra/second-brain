@@ -58,6 +58,9 @@ src/
   vault.ts      varredura do vault, leitura de nota, frontmatter e título
   chunk.ts      quebra em trechos guiada por headings (ADR 008)
   markdown.ts   cercas de código e headings, usados por vault e chunk
+  embed.ts      interface Embedder e cliente Ollama (ADR 003)
+  hash-embedder.ts  embedder determinístico para testes, sem rede
+  doctor.ts     diagnóstico dos pré-requisitos (`brain doctor`)
 tests/          Vitest; nenhum teste exige Ollama
 docs/           SPEC, ADRs, specs e roadmap
 ```

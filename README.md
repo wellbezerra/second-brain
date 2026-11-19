@@ -3,13 +3,16 @@
 Segundo cérebro local: indexa um vault Obsidian e responde buscas híbridas
 (palavra-chave + significado) sobre ele, sem mandar nada para fora da máquina.
 
-> Em construção. Hoje existe o esqueleto e o `brain init`; o resto chega
+> Em construção. Hoje existem `brain init` e `brain doctor`; o resto chega
 > commit a commit, na ordem do [roadmap](docs/ROADMAP.md).
 
 ## Pré-requisitos
 
 - **Node.js 24** (veja `.nvmrc`).
-- **Ollama**, a partir da indexação (spec 03 em diante).
+- **Ollama** instalado e rodando (`ollama serve`), com o modelo baixado:
+  `ollama pull bge-m3`.
+
+O `brain doctor` verifica tudo isso e diz o que falta.
 
 ## Instalação
 
