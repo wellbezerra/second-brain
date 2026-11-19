@@ -1,8 +1,10 @@
 # Roadmap — eight features
 
-Each feature is a spec and becomes **one commit**. The order respects the
-dependencies: no commit depends on something that does not exist yet, and each
-one leaves the test suite green.
+Each feature is a spec and becomes **one pull request**
+([ADR 014](adr/014-one-pr-per-feature-behind-a-flag.md)). The order respects
+the dependencies: no feature depends on something that does not exist yet, and
+each one leaves the test suite green. The "Commit" column is the pull request
+title.
 
 Specs 07 (note creation) and 09 (Git history) are **withdrawn**: both wrote to
 the vault, which [ADR 012](adr/012-read-only-vault.md) forbids. Their numbers
@@ -47,13 +49,15 @@ instead of a prototype that worked once.
 > Specs 02 to 10 still mention Python (`pytest`, `httpx`, `pip`); each one is
 > corrected in the commit that implements it.
 
-## Rules for each commit
+## Rules for each feature
 
-- **Test before code.** The failing test goes in its own commit, before the
-  implementation. This applies above all to the second-indexing test (spec 05)
+- **Test before code.** Inside the feature's pull request, the failing test goes
+  in its own commit, before the implementation. This applies above all to the second-indexing test (spec 05)
   and to the lying-`mtime` test (spec 08) — both describe behaviour that is easy
   to break without noticing.
 - **Green suite at the end of every commit.** No "fix it in the next one".
+- **User-visible behaviour ships behind a flag**, off by default
+  ([ADR 014](adr/014-one-pr-per-feature-behind-a-flag.md)).
 - **No test requires Ollama.** `HashEmbedder` exists for that since spec 03.
   Breaking this rule makes CI impossible.
 - **A changed decision changes the ADR.** An accepted ADR is not edited: a new

@@ -21,15 +21,15 @@ and the old one's status changes to *superseded by NNN*.
 | [010](010-optional-explicit-git.md) | Optional, explicit Git | superseded by 012 |
 | [011](011-node-typescript-runtime.md) | Node.js and TypeScript as the runtime | accepted |
 | [012](012-read-only-vault.md) | The vault is read-only to Brain | accepted |
+| [013](013-two-level-verification-gate.md) | Two-level verification gate | accepted |
+| [014](014-one-pr-per-feature-behind-a-flag.md) | One pull request per feature, behind a feature flag | accepted |
 
 ## Format
 
-Title, status with date, and four sections: **Context**, **Decision**,
-**Alternatives considered** and **Consequences**.
-
-The alternatives section is the one that gains value over time. Recording what
-was discarded and why avoids redoing the same analysis, and makes it clear when
-a premise has changed enough to reopen the discussion.
+New ADRs start from [TEMPLATE.md](TEMPLATE.md): **Context**, **Decision**,
+**Consequences** and **Status**. ADRs 001–012 predate the template and also
+record the alternatives considered; that is welcome when the alternatives carry
+weight, as a paragraph inside **Context**.
 
 ## Language
 
