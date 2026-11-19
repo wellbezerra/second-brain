@@ -11,6 +11,7 @@ export type IndexErrorKind =
   | "identity-mismatch"
   | "no-identity"
   | "schema"
+  | "corrupt"
   | "extension"
   | "invalid-input";
 
@@ -120,7 +121,13 @@ export class BrainIndex {
       return index;
     } catch (error) {
       db.close();
-      throw error;
+      throw isCorruption(error)
+        ? new IndexError(
+            "corrupt",
+            `o arquivo ${path} não é um índice válido (corrompido ou não é SQLite). ` +
+              "O vault é a fonte de verdade: apague esse arquivo ou rode `brain index --rebuild`.",
+          )
+        : error;
     }
   }
 
@@ -209,6 +216,10 @@ export class BrainIndex {
         "invalid-input",
         `vetor de dimensão ${wrong.length}, mas o índice é de ${identity.dim}`,
       );
+    }
+    // NaN ou Infinity no vec0 envenenam toda distância calculada contra eles.
+    if (embeddings.some((v) => !v.every(Number.isFinite))) {
+      throw new IndexError("invalid-input", "vetor com valor não finito (NaN ou Infinity)");
     }
 
     const insertChunk = this.db.prepare(
@@ -358,6 +369,12 @@ export class BrainIndex {
 
 function describe(identity: IndexIdentity): string {
   return `${identity.provider} · ${identity.model} (${identity.dim} dimensões)`;
+}
+
+/** O SQLite recusou o arquivo por não ser um banco, ou por estar danificado. */
+function isCorruption(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === "SQLITE_NOTADB" || code === "SQLITE_CORRUPT";
 }
 
 function loadVec(db: Database.Database): void {

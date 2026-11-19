@@ -70,8 +70,9 @@ export class OllamaEmbedder implements Embedder {
   async listModels(): Promise<string[]> {
     const response = await this.request("/api/tags");
     if (!response.ok) throw this.httpError(response.status, await response.text());
-    const data = (await response.json()) as { models?: { name?: string }[] };
-    return (data.models ?? []).map((m) => m.name ?? "").filter((n) => n !== "");
+    const data = (await readJson(response)) as { models?: { name?: string }[] } | null;
+    const models = Array.isArray(data?.models) ? data.models : [];
+    return models.map((m) => (typeof m?.name === "string" ? m.name : "")).filter((n) => n !== "");
   }
 
   hasModel(models: readonly string[]): boolean {
@@ -90,8 +91,8 @@ export class OllamaEmbedder implements Embedder {
     }
     if (!response.ok) throw this.httpError(response.status, await response.text());
 
-    const data = (await response.json()) as { embeddings?: unknown };
-    const embeddings = data.embeddings;
+    const data = (await readJson(response)) as { embeddings?: unknown } | null;
+    const embeddings = data?.embeddings;
     if (!Array.isArray(embeddings) || !embeddings.every(isVector)) {
       throw new EmbedError("bad-response", "o Ollama devolveu uma resposta sem vetores");
     }
@@ -113,11 +114,12 @@ export class OllamaEmbedder implements Embedder {
         if (isModelMissing(body)) throw this.modelMissing();
         throw this.httpError(response.status, body);
       }
-      const data = (await response.json()) as { embedding?: unknown };
-      if (!isVector(data.embedding)) {
+      const data = (await readJson(response)) as { embedding?: unknown } | null;
+      const embedding = data?.embedding;
+      if (!isVector(embedding)) {
         throw new EmbedError("bad-response", "o Ollama devolveu uma resposta sem vetores");
       }
-      out.push(data.embedding);
+      out.push(embedding);
     }
     return out;
   }
@@ -157,6 +159,15 @@ export class OllamaEmbedder implements Embedder {
   private httpError(status: number, body: string): EmbedError {
     const detail = errorField(body) ?? body.slice(0, 200);
     return new EmbedError("http", `o Ollama respondeu ${status}: ${detail}`);
+  }
+}
+
+/** Corpo de uma resposta 2xx; o que não for JSON (um proxy, uma página de erro) é resposta defeituosa. */
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    throw new EmbedError("bad-response", "o Ollama devolveu uma resposta que não é JSON");
   }
 }
 

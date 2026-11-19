@@ -46,8 +46,12 @@ export function normalize(vector: readonly number[]): number[] {
   return norm === 0 ? [...vector] : vector.map((x) => x / norm);
 }
 
+/**
+ * Lista não vazia de números finitos. `JSON.parse` lê `1e999` como Infinity,
+ * e um vetor assim viraria NaN ao normalizar: é resposta defeituosa, não vetor.
+ */
 export function isVector(value: unknown): value is number[] {
-  return Array.isArray(value) && value.length > 0 && value.every((x) => typeof x === "number");
+  return Array.isArray(value) && value.length > 0 && value.every((x) => Number.isFinite(x));
 }
 
 /** Garante que todos os vetores têm a mesma dimensão (e a esperada, se já conhecida). */

@@ -1,3 +1,4 @@
+import { ConfigError } from "../config.js";
 import type { Env, ProviderName, Settings } from "../config.js";
 import type { Embedder } from "../embed.js";
 import { GeminiEmbedder } from "./gemini.js";
@@ -33,11 +34,29 @@ export function createEmbedder(
       return new VoyageEmbedder({
         ...common,
         apiKey: env.VOYAGE_API_KEY,
-        baseUrl: nonEmpty(env.VOYAGE_BASE_URL),
+        baseUrl: httpUrl("VOYAGE_BASE_URL", nonEmpty(env.VOYAGE_BASE_URL)),
       });
     case "ollama":
       return new OllamaEmbedder({ ...common, url: settings.ollamaUrl });
   }
+}
+
+/** Endereço base vindo do ambiente: precisa ser http(s), já que a chave vai junto. */
+function httpUrl(variable: string, value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  let protocol: string | undefined;
+  try {
+    protocol = new URL(value).protocol;
+  } catch {
+    protocol = undefined;
+  }
+  if (protocol !== "https:" && protocol !== "http:") {
+    throw new ConfigError(
+      `${variable} não é um endereço http(s) válido: '${value}'. ` +
+        "Use algo como https://api.voyageai.com/v1, ou apague a variável para usar o padrão.",
+    );
+  }
+  return value;
 }
 
 function nonEmpty(value: string | undefined): string | undefined {
