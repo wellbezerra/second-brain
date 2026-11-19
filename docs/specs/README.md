@@ -11,9 +11,9 @@ One spec per feature, one feature per commit. Order and dependencies are in the
 | [04](04-index-schema.md) | Index schema | SQLite with FTS5 and vectors, `brain status` |
 | [05](05-incremental-indexing.md) | Incremental indexing | `brain index` |
 | [06](06-hybrid-search.md) | Hybrid search | `brain search` |
-| [07](07-note-creation.md) | Note creation | `brain save` |
+| [07](07-note-creation.md) | Note creation | **withdrawn** ([ADR 012](../adr/012-read-only-vault.md)) |
 | [08](08-reconciliation.md) | Reconciliation | `brain reconcile` |
-| [09](09-git-history.md) | Optional Git history | automatic commit, `brain log` |
+| [09](09-git-history.md) | Optional Git history | **withdrawn** ([ADR 012](../adr/012-read-only-vault.md)) |
 | [10](10-packaging-and-evaluation.md) | Packaging and evaluation | installation, `brain eval`, CI |
 
 ## Format

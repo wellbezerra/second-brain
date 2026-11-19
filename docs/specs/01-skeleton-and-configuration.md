@@ -6,8 +6,9 @@
 ## Goal
 
 Have an installable Node/TypeScript package ([ADR 011](../adr/011-node-typescript-runtime.md)),
-with the `brain` command registered, able to discover which vault to use and to
-prepare that vault for the following features.
+with the `brain` command registered, able to discover which vault to use and
+where its index lives. The vault itself is never written to
+([ADR 012](../adr/012-read-only-vault.md)).
 
 At the end of this commit nothing is indexed or searched. What exists is the
 skeleton the other nine features plug into.
@@ -57,7 +58,8 @@ brain/
 Precedence, strongest to weakest:
 
 1. CLI argument (`--vault`, `--model`)
-2. environment variable (`BRAIN_VAULT`, `BRAIN_MODEL`, `BRAIN_OLLAMA_URL`)
+2. environment variable (`SECOND_BRAIN_VAULT`, `SECOND_BRAIN_MODEL`,
+   `SECOND_BRAIN_OLLAMA_URL`)
 3. the file `~/.config/brain/config.json` (honouring `XDG_CONFIG_HOME`)
 4. built-in default
 
@@ -68,30 +70,33 @@ Fields and defaults:
 | `vault` | — | required; without it, an error pointing to `brain init` |
 | `model` | `bge-m3` | embedding model in Ollama |
 | `ollama_url` | `http://127.0.0.1:11434` | |
-| `excludes` | `.obsidian`, `.trash`, `.git`, `.brain`, `node_modules` | ignored folders |
-| `git` | `false` | automatic commit ([ADR 010](../adr/010-optional-explicit-git.md)) |
+| `excludes` | `.obsidian`, `.trash`, `.git`, `node_modules` | ignored folders |
 
 The vault path is expanded (`~`) and resolved to absolute at load time.
 Everything below works with absolute paths; relative paths only exist at the
 boundary with the user and inside the manifest.
 
+The index directory is derived, not configured: `<data-dir>/brain/<vault-id>/`,
+where `<data-dir>` is `$XDG_DATA_HOME` (default `~/.local/share`) or
+`%LOCALAPPDATA%` on Windows, and `<vault-id>` is the first 16 hex characters of
+the `sha256` of the vault's resolved real path
+([ADR 012](../adr/012-read-only-vault.md)).
+
 ## `brain init`
 
 ```
-brain init --vault ~/Documents/notes [--model bge-m3] [--git]
+brain init --vault ~/Documents/notes [--model bge-m3]
 ```
 
 Steps, in order:
 
-1. Checks that the path exists and is a directory. If it does not exist, asks
-   before creating it — creating a folder by mistake because of a mistyped path
-   is worse than failing. Outside an interactive terminal there is nobody to
-   ask: it fails, unless `--yes` is given.
-2. Creates `<vault>/.brain/`.
-3. If the vault is a Git repository, makes sure `.gitignore` contains the line
-   `.brain/`. If it cannot write, warns and continues.
-4. Writes the configuration to `~/.config/brain/config.json`.
-5. Prints what was configured and what the next command is.
+1. Checks that the path exists and is a directory. If it does not, fails — Brain
+   never creates or modifies anything inside or at the vault path.
+2. Creates the index directory and writes `vault.json` into it, recording the
+   vault's resolved path.
+3. Writes the configuration to `~/.config/brain/config.json`.
+4. Prints what was configured, where the index lives and what the next command
+   is.
 
 Running it again is safe: it updates the configuration and undoes nothing.
 
@@ -102,10 +107,11 @@ Running it again is safe: it updates the configuration and undoes nothing.
 - `brain --version` prints the version.
 - Any command without a configured vault fails with a message naming the three
   ways to fix it, and with a non-zero exit code.
-- `brain init` on a non-existent path creates nothing without confirmation.
-- After `brain init`, `<vault>/.brain/` exists and the configuration holds the
-  absolute path.
-- In a vault that is a Git repository, `.gitignore` contains `.brain/`.
+- `brain init` on a non-existent path fails and creates nothing.
+- After `brain init`, the index directory exists with a `vault.json`, and the
+  configuration holds the absolute vault path.
+- `brain init` leaves the vault byte-identical: no file or folder is created,
+  changed or removed in it.
 
 ## Tests
 
@@ -115,5 +121,6 @@ Running it again is safe: it updates the configuration and undoes nothing.
   error naming the file.
 - A missing vault throws `ConfigError`, not some `TypeError`.
 - `init` is idempotent: two runs leave the same state.
-- `init` appends `.brain/` to a `.gitignore` that already has content, without
-  duplicating the line if it is already there.
+- The same vault reached through two spellings of its path (trailing slash,
+  symlink) maps to the same `<vault-id>`.
+- A snapshot of the vault taken before `init` equals one taken after.

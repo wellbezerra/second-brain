@@ -6,7 +6,7 @@ decisions in [docs/adr/](docs/adr/), build order in [docs/ROADMAP.md](docs/ROADM
 
 ```
          ┌──────────────┐
-         │  vault/*.md  │  ← source of truth (Obsidian edits here)
+         │  vault/*.md  │  ← source of truth (Obsidian edits, Brain only reads)
          └──────┬───────┘
                 │ read + hash
                 ▼
@@ -16,7 +16,8 @@ decisions in [docs/adr/](docs/adr/), build order in [docs/ROADMAP.md](docs/ROADM
                 │ chunks + vectors
                 ▼
    ┌────────────────────────────┐
-   │  vault/.brain/index.db     │  derived, disposable index
+   │ <data-dir>/brain/<id>/     │  derived, disposable index,
+   │ index.db                   │  outside the vault
    │  files · chunks ·          │
    │  chunks_fts · chunks_vec   │
    └────────────┬───────────────┘
@@ -34,10 +35,9 @@ decisions in [docs/adr/](docs/adr/), build order in [docs/ROADMAP.md](docs/ROADM
 | Index | One SQLite file: manifest, FTS5 and `sqlite-vec` | [ADR 004](docs/adr/004-single-sqlite-index.md) |
 | Search | Hybrid, fused by RRF | [ADR 005](docs/adr/005-hybrid-search-with-rrf.md) |
 | Indexing | Incremental by hash | [ADR 006](docs/adr/006-incremental-indexing-by-hash.md) |
-| Where the index lives | `<vault>/.brain/` | [ADR 007](docs/adr/007-index-inside-the-vault.md) |
+| Vault access | Read-only; the index lives in the user data directory | [ADR 012](docs/adr/012-read-only-vault.md) |
 | Chunking | Heading-guided | [ADR 008](docs/adr/008-heading-guided-chunking.md) |
 | Repair | `brain reconcile`, on demand | [ADR 009](docs/adr/009-on-demand-reconciliation.md) |
-| History | Optional Git | [ADR 010](docs/adr/010-optional-explicit-git.md) |
 | Runtime | Node 24 + TypeScript | [ADR 011](docs/adr/011-node-typescript-runtime.md) |
 
 ## Boundary between CLI and logic
@@ -53,11 +53,11 @@ top, as a thin shell.
 src/
   cli.ts        entry point of the `brain` command; parsing, printing, exit codes
   config.ts     configuration loading (argument > environment > file > default)
-  init.ts       vault preparation (`brain init`)
+  init.ts       writes Brain's own configuration (`brain init`); never the vault
   version.ts    version read from package.json
 tests/          Vitest; no test requires Ollama
 docs/           SPEC, ADRs, specs and roadmap
 ```
 
-The vault, embeddings, index, search, notes, reconciliation and Git modules
-arrive one per commit, following the roadmap.
+The vault, embeddings, index, search and reconciliation modules arrive one per
+commit, following the roadmap.

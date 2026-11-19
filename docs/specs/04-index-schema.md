@@ -3,7 +3,7 @@
 **Commit:** `feat: SQLite index schema with FTS5 and sqlite-vec`
 **Depends on:** [01](01-skeleton-and-configuration.md)
 **Reference decision:** [ADR 004](../adr/004-single-sqlite-index.md),
-[ADR 007](../adr/007-index-inside-the-vault.md)
+[ADR 012](../adr/012-read-only-vault.md)
 
 ## Goal
 
@@ -18,7 +18,8 @@ count — with no indexing rules, which belong to spec 05.
 
 ## Connection
 
-The file lives at `<vault>/.brain/index.db`. On open:
+The file lives at `<data-dir>/brain/<vault-id>/index.db`, outside the vault
+([spec 01](01-skeleton-and-configuration.md)). On open:
 
 ```sql
 PRAGMA journal_mode = WAL;

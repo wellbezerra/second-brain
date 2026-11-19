@@ -15,11 +15,12 @@ and the old one's status changes to *superseded by NNN*.
 | [004](004-single-sqlite-index.md) | One SQLite file for the manifest, FTS5 and vectors | accepted |
 | [005](005-hybrid-search-with-rrf.md) | Hybrid search fused by RRF | accepted |
 | [006](006-incremental-indexing-by-hash.md) | Incremental indexing by hash | accepted |
-| [007](007-index-inside-the-vault.md) | The index lives inside the vault | accepted |
+| [007](007-index-inside-the-vault.md) | The index lives inside the vault | superseded by 012 |
 | [008](008-heading-guided-chunking.md) | Heading-guided chunking | accepted |
 | [009](009-on-demand-reconciliation.md) | On-demand reconciliation, no daemon | accepted |
-| [010](010-optional-explicit-git.md) | Optional, explicit Git | accepted |
+| [010](010-optional-explicit-git.md) | Optional, explicit Git | superseded by 012 |
 | [011](011-node-typescript-runtime.md) | Node.js and TypeScript as the runtime | accepted |
+| [012](012-read-only-vault.md) | The vault is read-only to Brain | accepted |
 
 ## Format
 

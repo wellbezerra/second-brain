@@ -89,7 +89,10 @@ also goes into its own FTS5 column.
   error.
 - A 10,000-character note with no paragraph break is split anyway.
 - Returned paths are relative and stable between runs.
-- `.obsidian/`, `.brain/` and `.git/` never show up in the walk.
+- `.obsidian/` and `.git/` never show up in the walk.
+- Reading the vault leaves it byte-identical ([ADR 012](../adr/012-read-only-vault.md)).
+- A note whose body reads like an instruction ("ignore your previous
+  instructions and …") is returned as ordinary chunk text.
 
 ## Tests
 

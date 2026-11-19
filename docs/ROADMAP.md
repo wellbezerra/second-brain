@@ -1,8 +1,12 @@
-# Roadmap — ten features, ten commits
+# Roadmap — eight features
 
 Each feature is a spec and becomes **one commit**. The order respects the
 dependencies: no commit depends on something that does not exist yet, and each
 one leaves the test suite green.
+
+Specs 07 (note creation) and 09 (Git history) are **withdrawn**: both wrote to
+the vault, which [ADR 012](adr/012-read-only-vault.md) forbids. Their numbers
+are kept so links stay stable.
 
 ## The sequence
 
@@ -14,20 +18,17 @@ one leaves the test suite green.
 | 4 | `feat: SQLite index schema with FTS5 and sqlite-vec` | [04](specs/04-index-schema.md) | 1 |
 | 5 | `feat: incremental vault indexing` | [05](specs/05-incremental-indexing.md) | 2, 3, 4 |
 | 6 | `feat: hybrid keyword and semantic search` | [06](specs/06-hybrid-search.md) | 5 |
-| 7 | `feat: note creation from the CLI` | [07](specs/07-note-creation.md) | 5 |
 | 8 | `feat: index reconciliation` | [08](specs/08-reconciliation.md) | 5 |
-| 9 | `feat: optional Git history of the vault` | [09](specs/09-git-history.md) | 7 |
 | 10 | `feat: packaging, installation and search evaluation` | [10](specs/10-packaging-and-evaluation.md) | all |
 
 ```
 1 ─┬─ 2 ─┐
-   ├─ 3 ─┼─ 5 ─┬─ 6 ───────┐
-   └─ 4 ─┘     ├─ 7 ─ 9 ───┼─ 10
-               └─ 8 ───────┘
+   ├─ 3 ─┼─ 5 ─┬─ 6 ─┬─ 10
+   └─ 4 ─┘     └─ 8 ─┘
 ```
 
 Commits 2, 3 and 4 are independent of each other — they can be done in any
-order, or in parallel. So are commits 6, 7 and 8.
+order, or in parallel. So are commits 6 and 8.
 
 ## Where the project starts being useful
 
@@ -36,11 +37,11 @@ search yet, but you can already look at the index and confirm that chunking
 makes sense.
 
 **Commit 6** is the moment the project justifies its own existence. From there
-on daily use is possible, and commits 7 to 10 reduce friction and close gaps.
+on daily use is possible, and commits 8 and 10 close the gaps.
 
-If the urge to use it outweighs the urge to finish, stopping after 7 is an
-honest option: you can capture and search. 8 and 10 are what make the project
-sustainable instead of a prototype that worked once.
+If the urge to use it outweighs the urge to finish, stopping after 6 is an
+honest option: you can search. 8 and 10 are what make the project sustainable
+instead of a prototype that worked once.
 
 > **Runtime.** The project is Node/TypeScript ([ADR 011](adr/011-node-typescript-runtime.md)).
 > Specs 02 to 10 still mention Python (`pytest`, `httpx`, `pip`); each one is
@@ -71,7 +72,9 @@ Recorded here so it does not become hidden scope along the way:
 - **Local HTTP API.** The structure already allows it; the use case is missing.
 - **MCP server.** It would close the circle with the original project, now by
   choice and not by inheritance.
-- **Sync between machines via Git.** Viable with no design change.
+- **Pruning orphaned indexes.** Moving or deleting a vault leaves its index in
+  the data directory; `vault.json` makes a safe `brain prune` possible
+  ([ADR 012](adr/012-read-only-vault.md)).
 - **Cross-encoder reranking.** Only makes sense after `brain eval` shows where
   ordering goes wrong ([ADR 005](adr/005-hybrid-search-with-rrf.md)).
 - **Backlinks and graph.** Obsidian already does it; only worth it if search

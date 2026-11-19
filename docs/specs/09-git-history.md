@@ -1,5 +1,9 @@
 # Spec 09 — Optional Git history
 
+> **Withdrawn.** This feature commits to the vault's repository, which
+> [ADR 012](../adr/012-read-only-vault.md) forbids. Kept for the record; do not
+> implement.
+
 **Commit:** `feat: optional Git history of the vault`
 **Depends on:** [07](07-note-creation.md)
 **Reference decision:** [ADR 010](../adr/010-optional-explicit-git.md)

@@ -22,7 +22,9 @@ A CLI that indexes an Obsidian vault and answers hybrid searches over it.
 
 - Notes remain Markdown files in a folder. Obsidian keeps working normally,
   with no plugin at all.
-- The index is a SQLite file inside the vault, derived and disposable.
+- The index is a SQLite file in the user data directory, derived and
+  disposable. Brain never writes to the vault
+  ([ADR 012](adr/012-read-only-vault.md)).
 - Embeddings are generated locally by Ollama. Nothing leaves the machine.
 - Search combines FTS5 and vector similarity and returns a single list.
 
@@ -36,7 +38,7 @@ do not exist here.
 |---|---|
 | An MCP server | The interface is a local CLI ([ADR 001](adr/001-local-cli-instead-of-mcp.md)) |
 | A remote service | Personal use, one machine, no external access for now |
-| An editor | Obsidian already edits; Brain indexes and searches |
+| An editor | Obsidian already edits; Brain only reads the vault ([ADR 012](adr/012-read-only-vault.md)) |
 | A multi-user system | No authentication, no OAuth, no access control |
 | A file sync | Git or iCloud syncs, if that is ever needed |
 | A generative RAG | It returns chunks, not answers. Whatever generates text is the assistant consuming the output |
@@ -54,9 +56,6 @@ $ brain search "why we chose a queue instead of a direct call"
 
 2. Journal/2026-03-14.md  ·  Conversation with the team        (0.64)
    We discussed calling the indexer straight from the writer. The problem is...
-
-$ brain save "sqlite-vec accepts distance_metric=cosine in the column definition" --tag sqlite
-Journal/2026-11-19.md
 ```
 
 ## Architecture
@@ -65,7 +64,7 @@ Everything runs in process, with no daemon and no external network.
 
 ```
          ┌──────────────┐
-         │  vault/*.md  │  ← source of truth (Obsidian edits here)
+         │  vault/*.md  │  ← source of truth (Obsidian edits, Brain only reads)
          └──────┬───────┘
                 │ read + hash
                 ▼
@@ -75,7 +74,8 @@ Everything runs in process, with no daemon and no external network.
                 │ chunks + vectors
                 ▼
    ┌────────────────────────────┐
-   │  vault/.brain/index.db     │  derived, disposable index
+   │  <data-dir>/brain/<id>/    │  derived, disposable index
+   │  index.db                  │  outside the vault
    │  ├── files   (manifest)    │
    │  ├── chunks  (chunks)      │
    │  ├── chunks_fts  (FTS5)    │
@@ -124,8 +124,9 @@ and reindex.
 | [004](adr/004-single-sqlite-index.md) | One SQLite file for the manifest, FTS5 and vectors |
 | [005](adr/005-hybrid-search-with-rrf.md) | Hybrid search fused by RRF |
 | [006](adr/006-incremental-indexing-by-hash.md) | Incremental indexing by hash |
-| [007](adr/007-index-inside-the-vault.md) | The index lives inside the vault |
+| [007](adr/007-index-inside-the-vault.md) | The index lives inside the vault (superseded by 012) |
 | [008](adr/008-heading-guided-chunking.md) | Heading-guided chunking |
 | [009](adr/009-on-demand-reconciliation.md) | On-demand reconciliation, no daemon |
-| [010](adr/010-optional-explicit-git.md) | Optional, explicit Git |
+| [010](adr/010-optional-explicit-git.md) | Optional, explicit Git (superseded by 012) |
 | [011](adr/011-node-typescript-runtime.md) | Node.js and TypeScript as the runtime |
+| [012](adr/012-read-only-vault.md) | The vault is read-only to Brain |

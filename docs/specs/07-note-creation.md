@@ -1,5 +1,9 @@
 # Spec 07 — Note creation from the CLI
 
+> **Withdrawn.** This feature writes to the vault, which
+> [ADR 012](../adr/012-read-only-vault.md) forbids. Kept for the record; do not
+> implement.
+
 **Commit:** `feat: note creation from the CLI`
 **Depends on:** [05](05-incremental-indexing.md)
 **Reference decision:** [ADR 002](../adr/002-vault-as-source-of-truth.md)

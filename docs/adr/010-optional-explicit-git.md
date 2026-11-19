@@ -1,6 +1,6 @@
 # ADR 010 — Optional, explicit Git
 
-**Status:** accepted · 2026-11-19
+**Status:** superseded by [ADR 012](012-read-only-vault.md) · 2026-11-19
 
 ## Context
 

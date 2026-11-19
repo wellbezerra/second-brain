@@ -100,8 +100,9 @@ possible. `brain eval` needs a real model, so it runs by hand, not in CI.
 
 ## Tests
 
-- A smoke test that walks the whole flow in a temporary vault: `init`, `save`,
-  `index`, `search`, `reconcile`, `status`.
+- A smoke test that walks the whole flow in a temporary vault: `init`, `index`,
+  `search`, `reconcile`, `status` — and asserts the vault is byte-identical at
+  the end.
 - A test that every registered command accepts `--json` and `--quiet`.
 - `brain eval` with a tiny reference vault and trivial queries, just to make sure
   the metric computation is right — real quality evaluation is manual, with a
