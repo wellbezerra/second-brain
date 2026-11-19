@@ -11,6 +11,7 @@ deixa a suíte de testes verde.
 | 1 | `feat: esqueleto do projeto e configuração do vault` | [01](specs/01-esqueleto-e-configuracao.md) | — |
 | 2 | `feat: leitura do vault e chunking de Markdown` | [02](specs/02-leitura-do-vault-e-chunking.md) | 1 |
 | 3 | `feat: embeddings locais via Ollama` | [03](specs/03-embeddings-locais.md) | 1 |
+| 3b | `feat: embeddings por API (OpenAI, Gemini e Voyage)` | [03](specs/03-embeddings-locais.md) · [ADR 012](adr/012-embeddings-por-api-com-provedor-configuravel.md) | 3 |
 | 4 | `feat: esquema do índice em SQLite com FTS5 e sqlite-vec` | [04](specs/04-esquema-do-indice.md) | 1 |
 | 5 | `feat: indexação incremental do vault` | [05](specs/05-indexacao-incremental.md) | 2, 3, 4 |
 | 6 | `feat: busca híbrida por palavra-chave e significado` | [06](specs/06-busca-hibrida.md) | 5 |
@@ -53,7 +54,7 @@ projeto sustentável em vez de um protótipo que funcionou uma vez.
   (spec 05) e para o do `mtime` mentiroso (spec 08) — os dois descrevem
   comportamento que é fácil quebrar sem perceber.
 - **Suíte verde ao fim de cada commit.** Nada de "conserto no próximo".
-- **Nenhum teste exige Ollama.** `HashEmbedder` existe para isso desde a
+- **Nenhum teste usa rede** (nem Ollama, nem API). `HashEmbedder` existe para isso desde a
   spec 03. Quebrar essa regra inviabiliza o CI.
 - **Mudou a decisão, muda o ADR.** Não se edita um ADR aceito: escreve-se
   outro que o supera. A spec, essa sim, pode ser corrigida quando a
@@ -83,8 +84,8 @@ melhor que eu agora:
 
 1. **1.200 caracteres é o alvo certo de trecho?** Chutado com base no que é
    comum. O `brain eval` da spec 10 é que vai dizer.
-2. **`bge-m3` ou um modelo menor?** `bge-m3` é bom e multilíngue, mas pesado.
-   Se a indexação inicial demorar demais nesta máquina, `nomic-embed-text` é
-   a alternativa a medir.
+2. **Qual provedor e modelo de embedding?** OpenAI `text-embedding-3-small`
+   é o padrão por ser barato e conhecido; Gemini e Voyage são as alternativas
+   a medir com o `brain eval` ([ADR 012](adr/012-embeddings-por-api-com-provedor-configuravel.md)).
 3. **Peso do `heading` no BM25.** Começa em 2× o do `text`, por instinto.
    Também é caso de medir.

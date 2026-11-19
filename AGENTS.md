@@ -1,8 +1,8 @@
 # AGENTS.md
 
 **Brain** — CLI local que indexa um vault Obsidian e faz busca híbrida
-(FTS5 + vetores via Ollama), tudo em SQLite dentro do vault. Nada sai da
-máquina.
+(FTS5 + vetores), tudo em SQLite dentro do vault. Os embeddings vêm de uma
+API configurável — OpenAI, Gemini, Voyage — ou do Ollama local (ADR 012).
 
 - Produto: [docs/SPEC.md](docs/SPEC.md)
 - Decisões: [docs/adr/](docs/adr/)
@@ -13,7 +13,7 @@ máquina.
 ## Stack
 
 Node 24 (`.nvmrc`), TypeScript estrito, ESM. `parseArgs` para a CLI, `fetch`
-para o Ollama, `better-sqlite3` + `sqlite-vec` para o índice, Vitest para
+para os provedores de embedding, `better-sqlite3` + `sqlite-vec` para o índice, Vitest para
 testes ([ADR 011](docs/adr/011-node-typescript-como-runtime.md)).
 
 ## Comandos
@@ -31,7 +31,10 @@ npm link            # registra `brain` no PATH
 - **Uma feature, uma spec, um commit**, na ordem do ROADMAP. Antes do commit
   da feature vem um commit com o teste que falha.
 - **Suíte verde ao fim de cada commit de feature.**
-- **Nenhum teste exige Ollama.** Use o `HashEmbedder` (spec 03).
+- **Nenhum teste usa rede.** Use o `HashEmbedder` (spec 03); clientes de
+  API recebem `fetch` injetado.
+- **Chave de API só por variável de ambiente**, nunca em arquivo de
+  configuração, log ou mensagem de erro.
 - **Nada abaixo de `src/cli.ts` imprime, lê stdin ou chama `process.exit`.**
   A lógica devolve dados ou lança erros tipados.
 - **ADR aceito não se edita**: escreve-se um novo que o supera. Spec pode ser
