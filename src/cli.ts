@@ -2,9 +2,10 @@
 // Única camada que conhece parseArgs, stdout, stdin e process.exit.
 import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
-import { ConfigError, loadSettings } from "./config.js";
+import { ConfigError, loadSettings, parseProvider } from "./config.js";
 import { runDoctor } from "./doctor.js";
-import { EmbedError, OllamaEmbedder } from "./embed.js";
+import { EmbedError } from "./embed.js";
+import { API_KEY_VARS, createEmbedder } from "./embedders/index.js";
 import { VaultNotFoundError, initVault } from "./init.js";
 import type { InitOptions, InitResult } from "./init.js";
 import { version } from "./version.js";
@@ -20,11 +21,15 @@ Uso: brain <comando> [opções]
 Configuração
   init      prepara um vault e grava a configuração
             --vault <caminho>  pasta do vault (obrigatório)
-            --model <nome>     modelo de embedding no Ollama (padrão: bge-m3)
+            --provider <nome>  openai (padrão), gemini, voyage ou ollama
+            --model <nome>     modelo de embedding (padrão: o do provedor)
             --git              ativa o commit automático no vault
             --yes              cria a pasta do vault sem perguntar
-  doctor    verifica Node, Ollama, modelo e vault
-            --vault <caminho>  --model <nome>
+  doctor    verifica Node, provedor de embeddings, chave, modelo e vault
+            --vault <caminho>  --provider <nome>  --model <nome>
+
+Chaves de API só por variável de ambiente:
+  OPENAI_API_KEY, GEMINI_API_KEY, VOYAGE_API_KEY
 
 Opções gerais
   --version   mostra a versão
@@ -71,6 +76,7 @@ async function runInit(argv: string[]): Promise<number> {
     args: argv,
     options: {
       vault: { type: "string" },
+      provider: { type: "string" },
       model: { type: "string" },
       git: { type: "boolean" },
       yes: { type: "boolean", short: "y" },
@@ -85,6 +91,7 @@ async function runInit(argv: string[]): Promise<number> {
 
   const options: InitOptions = {
     vault: values.vault,
+    provider: parseProvider(values.provider),
     model: values.model,
     git: values.git,
     create: values.yes ?? false,
@@ -110,10 +117,12 @@ async function runInit(argv: string[]): Promise<number> {
 async function runDoctorCommand(argv: string[]): Promise<number> {
   const { values } = parseArgs({
     args: argv,
-    options: { vault: { type: "string" }, model: { type: "string" } },
+    options: { vault: { type: "string" }, provider: { type: "string" }, model: { type: "string" } },
   });
-  const settings = loadSettings({ args: { vault: values.vault, model: values.model } });
-  const embedder = new OllamaEmbedder({ url: settings.ollamaUrl, model: settings.model });
+  const settings = loadSettings({
+    args: { vault: values.vault, provider: values.provider, model: values.model },
+  });
+  const embedder = createEmbedder(settings);
   const checks = await runDoctor({ nodeVersion: process.version, settings, embedder });
 
   const mark = { ok: "✓", fail: "✗", skip: "–" } as const;
@@ -139,12 +148,20 @@ async function confirmCreate(path: string): Promise<boolean> {
 }
 
 function printInit(result: InitResult): void {
+  // Ambiente vazio: mostra o que ficou gravado, não o que BRAIN_* sobrepõe agora.
+  const settings = loadSettings({ env: {}, file: result.configFile });
+  const keyVar = API_KEY_VARS[settings.provider];
   if (result.created) console.log(`Pasta criada: ${result.vault}`);
   console.log(`Vault:         ${result.vault}`);
+  console.log(`Embeddings:    ${settings.provider} · ${settings.model}`);
   console.log(`Configuração:  ${result.configFile}`);
   if (result.gitignoreUpdated) console.log(`.gitignore:    .brain/ acrescentado`);
   for (const warning of result.warnings) console.error(`Aviso: ${warning}`);
-  console.log("\nPróximo passo: brain index");
+  if (keyVar) {
+    const state = process.env[keyVar]?.trim() ? "definida" : "ainda não definida";
+    console.log(`\nChave de API:  ${keyVar} (${state}). Fica só no ambiente, nunca no arquivo.`);
+  }
+  console.log("\nPróximo passo: brain doctor");
 }
 
 main(process.argv.slice(2)).then(

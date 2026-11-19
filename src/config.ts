@@ -7,10 +7,23 @@ export class ConfigError extends Error {
   override name = "ConfigError";
 }
 
+export const PROVIDERS = ["openai", "gemini", "voyage", "ollama"] as const;
+export type ProviderName = (typeof PROVIDERS)[number];
+
+/** Modelo usado quando a configuração não diz qual (ADR 012). */
+export const DEFAULT_MODELS: Readonly<Record<ProviderName, string>> = Object.freeze({
+  openai: "text-embedding-3-small",
+  gemini: "gemini-embedding-2",
+  voyage: "voyage-4",
+  ollama: "bge-m3",
+});
+
 export interface Config {
   /** Caminho absoluto do vault. */
   vault: string;
-  /** Modelo de embedding no Ollama. */
+  /** Provedor de embeddings (ADR 012). */
+  provider: ProviderName;
+  /** Modelo de embedding no provedor. */
   model: string;
   ollamaUrl: string;
   /** Pastas ignoradas na varredura. */
@@ -19,8 +32,8 @@ export interface Config {
   git: boolean;
 }
 
-export const DEFAULTS: Readonly<Omit<Config, "vault">> = Object.freeze({
-  model: "bge-m3",
+export const DEFAULTS: Readonly<Omit<Config, "vault" | "model">> = Object.freeze({
+  provider: "openai",
   ollamaUrl: "http://127.0.0.1:11434",
   excludes: [".obsidian", ".trash", ".git", ".brain", "node_modules"],
   git: false,
@@ -29,6 +42,7 @@ export const DEFAULTS: Readonly<Omit<Config, "vault">> = Object.freeze({
 /** O que pode vir da linha de comando. */
 export interface ConfigArgs {
   vault?: string | undefined;
+  provider?: string | undefined;
   model?: string | undefined;
   ollamaUrl?: string | undefined;
 }
@@ -86,13 +100,23 @@ export function loadSettings(options: LoadOptions = {}): Settings {
   const vault =
     nonEmpty(args.vault) ?? nonEmpty(env.BRAIN_VAULT) ?? nonEmpty(stored.vault);
 
+  const provider =
+    parseProvider(nonEmpty(args.provider) ?? nonEmpty(env.BRAIN_PROVIDER)) ??
+    stored.provider ??
+    DEFAULTS.provider;
+  // O modelo do arquivo pertence ao provedor do arquivo: trocar de provedor
+  // por argumento ou ambiente não arrasta um modelo que ele não conhece.
+  const storedModel =
+    (stored.provider ?? DEFAULTS.provider) === provider ? stored.model : undefined;
+
   return {
     ...(vault === undefined ? {} : { vault: expandPath(vault) }),
+    provider,
     model:
       nonEmpty(args.model) ??
       nonEmpty(env.BRAIN_MODEL) ??
-      stored.model ??
-      DEFAULTS.model,
+      storedModel ??
+      DEFAULT_MODELS[provider],
     ollamaUrl:
       nonEmpty(args.ollamaUrl) ??
       nonEmpty(env.BRAIN_OLLAMA_URL) ??
@@ -128,6 +152,11 @@ export function readConfigFile(file: string): Partial<Config> {
     if (typeof vault !== "string") throw invalid(file, "`vault` precisa ser texto");
     config.vault = vault;
   }
+  const provider = data.provider;
+  if (provider !== undefined) {
+    if (!isProvider(provider)) throw invalid(file, `\`provider\` precisa ser ${providerList()}`);
+    config.provider = provider;
+  }
   const model = data.model;
   if (model !== undefined) {
     if (typeof model !== "string") throw invalid(file, "`model` precisa ser texto");
@@ -155,11 +184,20 @@ export function readConfigFile(file: string): Partial<Config> {
   return config;
 }
 
-/** Grava campos na configuração, preservando os que já estavam lá. */
-export function saveConfig(values: Partial<Config>, file: string): void {
-  const merged = { ...readConfigFile(file), ...values };
+/**
+ * Grava campos na configuração, preservando os que já estavam lá, exceto os
+ * listados em `remove`. Chave de API nunca passa por aqui (ADR 012).
+ */
+export function saveConfig(
+  values: Partial<Config>,
+  file: string,
+  remove: readonly (keyof Config)[] = [],
+): void {
+  const merged: Partial<Config> = { ...readConfigFile(file), ...values };
+  for (const key of remove) delete merged[key];
   const out: Record<string, unknown> = {};
   if (merged.vault !== undefined) out.vault = merged.vault;
+  if (merged.provider !== undefined) out.provider = merged.provider;
   if (merged.model !== undefined) out.model = merged.model;
   if (merged.ollamaUrl !== undefined) out.ollama_url = merged.ollamaUrl;
   if (merged.excludes !== undefined) out.excludes = merged.excludes;
@@ -167,6 +205,22 @@ export function saveConfig(values: Partial<Config>, file: string): void {
 
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
+}
+
+/** Valida um provedor vindo de argumento ou ambiente. */
+export function parseProvider(value: string | undefined): ProviderName | undefined {
+  if (value === undefined) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (isProvider(normalized)) return normalized;
+  throw new ConfigError(`Provedor desconhecido: '${value}'. Use ${providerList()}.`);
+}
+
+function isProvider(value: unknown): value is ProviderName {
+  return typeof value === "string" && (PROVIDERS as readonly string[]).includes(value);
+}
+
+function providerList(): string {
+  return `${PROVIDERS.slice(0, -1).join(", ")} ou ${PROVIDERS.at(-1)}`;
 }
 
 function invalid(file: string, reason: string): ConfigError {

@@ -6,8 +6,15 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { ConfigError, configPath, expandPath, saveConfig } from "./config.js";
-import type { Config } from "./config.js";
+import {
+  ConfigError,
+  DEFAULTS,
+  configPath,
+  expandPath,
+  readConfigFile,
+  saveConfig,
+} from "./config.js";
+import type { Config, ProviderName } from "./config.js";
 
 /** O caminho do vault não existe; quem chama decide se pergunta e cria. */
 export class VaultNotFoundError extends Error {
@@ -19,6 +26,7 @@ export class VaultNotFoundError extends Error {
 
 export interface InitOptions {
   vault: string;
+  provider?: ProviderName | undefined;
   model?: string | undefined;
   git?: boolean | undefined;
   /** Cria o diretório do vault se ele não existir. */
@@ -74,9 +82,16 @@ export function initVault(options: InitOptions): InitResult {
   }
 
   const values: Partial<Config> = { vault };
+  const remove: (keyof Config)[] = [];
+  if (options.provider !== undefined) {
+    values.provider = options.provider;
+    // Modelo antigo era de outro provedor: sem modelo novo, vale o padrão.
+    const previous = readConfigFile(configFile).provider ?? DEFAULTS.provider;
+    if (options.model === undefined && previous !== options.provider) remove.push("model");
+  }
   if (options.model !== undefined) values.model = options.model;
   if (options.git !== undefined) values.git = options.git;
-  saveConfig(values, configFile);
+  saveConfig(values, configFile, remove);
 
   return { vault, configFile, created, gitignoreUpdated, warnings };
 }

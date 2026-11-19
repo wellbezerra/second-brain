@@ -58,7 +58,9 @@ src/
   vault.ts      varredura do vault, leitura de nota, frontmatter e título
   chunk.ts      quebra em trechos guiada por headings (ADR 008)
   markdown.ts   cercas de código e headings, usados por vault e chunk
-  embed.ts      interface Embedder e cliente Ollama (ADR 003)
+  embed.ts      interface Embedder, EmbedError, normalize (ADR 012)
+  embedders/    um cliente por provedor: openai, gemini, voyage, ollama;
+                http.ts (timeout, novas tentativas, erros) e index.ts (escolha)
   hash-embedder.ts  embedder determinístico para testes, sem rede
   doctor.ts     diagnóstico dos pré-requisitos (`brain doctor`)
 tests/          Vitest; nenhum teste usa rede
