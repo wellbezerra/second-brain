@@ -18,13 +18,14 @@ One spec per feature, one feature per commit. Order and dependencies are in the
 
 ## Format
 
-Each spec has: **goal**, **scope** (what is in and what is out), the feature's
-**design**, **acceptance criteria** and **tests**, plus the commit and the
-dependencies in the header.
+New specs start from [TEMPLATE.md](TEMPLATE.md): problem, in scope, out of
+scope, acceptance criteria, test scenarios, affected files. A spec formalises
+the contract and the expected behaviour; it never describes what the code
+already does, and it never carries an implementation plan. Specs 01–10 predate
+the template and include design notes; treat those as context, not as a plan.
 
-The scope section is the one that prevents the most rework. Saying what is
-*not* in a commit is what stops the feature from growing while it is being
-written.
+The out-of-scope section is the one that prevents the most rework. Saying what
+is *not* in a feature is what stops it from growing while it is being written.
 
 A spec is not a contract: when the implementation shows it was wrong, the spec
 is corrected in the same commit that contradicts it. What is not rewritten is

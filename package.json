@@ -1,0 +1,33 @@
+{
+  "name": "second-brain",
+  "version": "0.0.0",
+  "description": "Local second brain: hybrid search over an Obsidian vault",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "brain": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test:unit": "vitest run --dir tests/unit",
+    "test:integration": "vitest run --dir tests/integration --passWithNoTests",
+    "check:fast": "npm run lint && npm run typecheck && npm run test:unit",
+    "check:full": "npm run check:fast && npm run test:integration",
+    "dev": "vitest --dir tests/unit"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}
