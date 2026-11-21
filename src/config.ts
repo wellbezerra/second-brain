@@ -91,6 +91,9 @@ export function expandPath(path: string, ctx: PathContext): string {
   return p.resolve(ctx.cwd, expanded);
 }
 
+/** The first value that is set; an empty string counts as unset, like an empty variable. */
+const firstSet = (...values: (string | undefined)[]) => values.find((value) => value);
+
 export interface ResolveInput extends PathContext {
   readonly args: { readonly vault?: string; readonly model?: string };
   readonly env: Env;
@@ -99,7 +102,7 @@ export interface ResolveInput extends PathContext {
 
 export function resolveConfig(input: ResolveInput): Config {
   const { args, env, file } = input;
-  const vault = args.vault ?? env.SECOND_BRAIN_VAULT ?? file.vault;
+  const vault = firstSet(args.vault, env.SECOND_BRAIN_VAULT, file.vault);
   if (!vault) {
     throw new ConfigError(
       [
@@ -112,8 +115,8 @@ export function resolveConfig(input: ResolveInput): Config {
   }
   return {
     vault: expandPath(vault, input),
-    model: args.model ?? env.SECOND_BRAIN_MODEL ?? file.model ?? DEFAULTS.model,
-    ollamaUrl: env.SECOND_BRAIN_OLLAMA_URL ?? file.ollama_url ?? DEFAULTS.ollamaUrl,
+    model: firstSet(args.model, env.SECOND_BRAIN_MODEL, file.model) ?? DEFAULTS.model,
+    ollamaUrl: firstSet(env.SECOND_BRAIN_OLLAMA_URL, file.ollama_url) ?? DEFAULTS.ollamaUrl,
     excludes: file.excludes ?? DEFAULTS.excludes,
   };
 }
