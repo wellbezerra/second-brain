@@ -103,8 +103,10 @@ Steps, in order:
 
 1. Checks that the path exists and is a directory. If it does not, fails — Brain
    never creates or modifies anything inside or at the vault path.
-2. Reads the current configuration. If it is broken, fails naming the file,
-   before creating or overwriting anything.
+2. Reads the current configuration. If it is broken or cannot be read, fails
+   naming the file, before creating or overwriting anything. Fails too, before
+   writing anything, when the index folder or the configuration file would land
+   inside the vault (for example `brain init --vault ~`).
 3. Creates the index directory and writes `vault.json` into it, recording the
    vault's real path (links and Windows short names resolved).
 4. Writes the configuration file with the same real path in `vault` (and
