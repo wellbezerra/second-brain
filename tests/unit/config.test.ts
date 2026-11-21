@@ -66,6 +66,16 @@ describe('resolveConfig', () => {
     });
   });
 
+  it('treats an empty environment variable as unset', () => {
+    const config = resolveConfig({
+      ...posixCtx,
+      args: {},
+      env: { SECOND_BRAIN_VAULT: '', SECOND_BRAIN_MODEL: '', SECOND_BRAIN_OLLAMA_URL: '' },
+      file: fileWith({ vault: '/from/file' }),
+    });
+    expect(config).toEqual({ ...DEFAULTS, vault: '/from/file' });
+  });
+
   it('uses the defaults when there is no configuration file', () => {
     const config = resolveConfig({ ...posixCtx, args: { vault: '/v' }, env: {}, file: noFile });
     expect(config).toEqual({ vault: '/v', ...DEFAULTS });
