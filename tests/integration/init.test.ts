@@ -132,6 +132,7 @@ describe('init', () => {
       init({ vault }, { ...ctx, configPath: join(vault, '.config', 'brain', 'config.json') }),
     ).toThrow(InitError);
     expect(() => init({ vault: root }, ctx)).toThrow(/inside the vault/);
+    expect(() => init({ vault }, { ...ctx, dataDir: join(vault, '..data') })).toThrow(InitError);
     expect(snapshot(vault)).toEqual(before);
     expect(existsSync(ctx.dataDir)).toBe(false);
   });
