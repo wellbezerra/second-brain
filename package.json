@@ -24,7 +24,7 @@
     "check:full": "node --disable-warning=ExperimentalWarning scripts/run-locked.ts npm run check:full:run",
     "dev": "vitest --dir tests/unit",
     "check:layers": "node --disable-warning=ExperimentalWarning scripts/check-test-layers.ts",
-    "check:full:run": "npm run check:fast && npm run test:integration && npm run test:evals",
+    "check:full:run": "npm run check:fast && npm run build && npm run test:integration && npm run test:evals",
     "test:evals": "vitest run --dir tests/evals --silent=false"
   },
   "devDependencies": {

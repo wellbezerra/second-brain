@@ -19,7 +19,7 @@ Node 24, strict TypeScript, ESM, Biome (lint + format), Vitest
 ```sh
 make setup        # install dependencies and the git hooks (core.hooksPath)
 make check-fast   # Biome, tsc, test-layer check, unit tests — seconds; your inner loop
-make check-full   # check-fast + integration tests + retrieval evals, under a lock
+make check-full   # check-fast + build + integration and e2e tests + retrieval evals, under a lock
 make evals        # retrieval evals alone: hit rate@5 and MRR against the thresholds
 make dev          # unit tests in watch mode
 ```
@@ -34,6 +34,11 @@ its queue position and waits — do not start a second one to "speed things up".
 
 - `src/cli.ts` — the only module that prints, reads stdin or calls `process.exit`
 - `src/commands.ts` — turns argv into a command; pure
+- `src/config.ts` — configuration precedence, validation, config path, data
+  and index folders; pure (`config-file.ts` does the read)
+- `src/flags.ts` — feature flags: `features` in the config file, overridden by
+  `SECOND_BRAIN_FEATURES`; all off by default
+- `src/init.ts` — `brain init`: writes only Brain's config and index folder
 - `src/embedding/` — `Embedder` contract, `FakeEmbedder` (hash-based, no
   network; the default in tests and CI), `OllamaEmbedder` (real, local)
 - `scripts/hooks/` — git hooks: pre-commit (size, secrets, `.env`, format,
@@ -48,7 +53,9 @@ its queue position and waits — do not start a second one to "speed things up".
 - `.claude/agents/reviewer.md` — read-only reviewer: READY or blockers
 - `tests/unit/` — unit tests, run by `check-fast`
 - `tests/integration/` — integration tests, run by `check-full` only; tests
-  that need Ollama skip themselves in CI and when Ollama is not reachable
+  that need Ollama skip themselves in CI and when Ollama is not reachable;
+  `*.e2e.test.ts` run the built `dist/cli.js` with every write location
+  pointed at a temporary folder
 - `tests/fixtures/vault/` — the only vault tests ever see; the vault guard in
   `tests/setup/` fails the run if `SECOND_BRAIN_VAULT` leaves the repository
 - `tests/evals/` — retrieval evals: `golden.jsonl` (typical, edge and no-answer

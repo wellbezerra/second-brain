@@ -25,9 +25,11 @@ module, `brain init` command, boundary between logic and interface.
 This is the structural decision of the commit, and it is worth more than the
 code it organises.
 
-No module below `cli.ts` may call `parseArgs`, write to `stdout`
-(`console.log`, `process.stdout`) or call `process.exit`. Logic receives
-arguments and returns data; the CLI does the printing.
+No module below the CLI layer (`cli.ts`, plus the pure argument parser in
+`commands.ts`) may parse `argv`, write to `stdout` (`console.log`,
+`process.stdout`) or call `process.exit`. Logic receives arguments and returns
+data or throws typed errors; the CLI prints and picks the exit code (1 for a
+failed command, 2 for a usage error).
 
 The reason is the one in [ADR 001](../adr/001-local-cli-instead-of-mcp.md): if
 one day I want an HTTP API or an MCP server on top of this, I want to write a
@@ -44,13 +46,16 @@ brain/
 ├── README.md
 ├── docs/                   # SPEC, ADRs, specs
 ├── src/
-│   ├── cli.ts              # the only layer that knows parseArgs, stdout and process.exit
-│   ├── config.ts
+│   ├── cli.ts              # the only layer that knows stdout and process.exit
+│   ├── commands.ts         # argv → command, pure
+│   ├── config.ts           # precedence, validation, derived locations; pure
+│   ├── config-file.ts      # reads the configuration file
+│   ├── flags.ts            # feature flags
 │   ├── init.ts             # brain init logic, returns data
 │   └── version.ts
 └── tests/
-    ├── config.test.ts
-    └── init.test.ts
+    ├── unit/               # config, flags, commands
+    └── integration/        # init on real folders; the built CLI end to end
 ```
 
 ## Configuration
@@ -72,13 +77,19 @@ Fields and defaults:
 | `ollama_url` | `http://127.0.0.1:11434` | |
 | `excludes` | `.obsidian`, `.trash`, `.git`, `node_modules` | ignored folders |
 
+The file uses the field names above (`ollama_url`, not `ollamaUrl`). Invalid
+JSON, a top level that is not an object, or a field of the wrong type is a
+`ConfigError` naming the file. A broken file fails only the commands that need
+the configuration: `brain --version` and `brain --help` keep working.
+
 The vault path is expanded (`~`) and resolved to absolute at load time.
 Everything below works with absolute paths; relative paths only exist at the
 boundary with the user and inside the manifest.
 
 The index directory is derived, not configured: `<data-dir>/brain/<vault-id>/`,
-where `<data-dir>` is `$XDG_DATA_HOME` (default `~/.local/share`) or
-`%LOCALAPPDATA%` on Windows, and `<vault-id>` is the first 16 hex characters of
+where `<data-dir>` is, in order: `$XDG_DATA_HOME` if set (any platform); on
+Windows `%LOCALAPPDATA%`, else `<home>\AppData\Local`; elsewhere
+`~/.local/share`. And `<vault-id>` is the first 16 hex characters of
 the `sha256` of the vault's resolved real path
 ([ADR 012](../adr/012-read-only-vault.md)).
 
@@ -92,13 +103,24 @@ Steps, in order:
 
 1. Checks that the path exists and is a directory. If it does not, fails — Brain
    never creates or modifies anything inside or at the vault path.
-2. Creates the index directory and writes `vault.json` into it, recording the
-   vault's resolved path.
-3. Writes the configuration to `~/.config/brain/config.json`.
-4. Prints what was configured, where the index lives and what the next command
+2. Reads the current configuration. If it is broken or cannot be read, fails
+   naming the file, before creating or overwriting anything. Fails too, before
+   writing anything, when the index folder or the configuration file would land
+   inside the vault (for example `brain init --vault ~`).
+3. Creates the index directory and writes `vault.json` into it, recording the
+   vault's real path (links and Windows short names resolved).
+4. Writes the configuration file with the same real path in `vault` (and
+   `model`, when given), keeping every other key already in it.
+5. Prints what was configured, where the index lives and what the next command
    is.
 
 Running it again is safe: it updates the configuration and undoes nothing.
+
+`brain init` is user-visible, so it ships behind the `init` feature flag, off by
+default ([ADR 014](../adr/014-one-pr-per-feature-behind-a-flag.md)). A
+`features` list in the configuration file turns flags on, and
+`SECOND_BRAIN_FEATURES` (comma-separated; `name` on, `-name` off) overrides it.
+With the flag off, `brain init` exits 2 and says how to turn it on.
 
 ## Acceptance criteria
 
@@ -106,7 +128,9 @@ Running it again is safe: it updates the configuration and undoes nothing.
   PATH.
 - `brain --version` prints the version.
 - Any command without a configured vault fails with a message naming the three
-  ways to fix it, and with a non-zero exit code.
+  ways to fix it, and with a non-zero exit code. No command in this spec needs
+  a vault yet: the message is proved on the configuration logic, and through
+  the CLI with the first command that uses it (spec 05).
 - `brain init` on a non-existent path fails and creates nothing.
 - After `brain init`, the index directory exists with a `vault.json`, and the
   configuration holds the absolute vault path.
