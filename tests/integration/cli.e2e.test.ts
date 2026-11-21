@@ -65,6 +65,17 @@ describe('brain', () => {
     expect(brain(['--version']).code).toBe(0);
   });
 
+  it('still prints help when the configuration path cannot be read', () => {
+    mkdirSync(join(root, 'config', 'brain', 'config.json'), { recursive: true });
+    expect(brain(['--help'])).toMatchObject({
+      code: 0,
+      stdout: expect.stringContaining('Usage: brain'),
+    });
+    const r = brain(['init', '--vault', FIXTURE_VAULT], { SECOND_BRAIN_FEATURES: 'init' });
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain(join(root, 'config', 'brain', 'config.json'));
+  });
+
   it('keeps `brain init` behind its feature flag, and says how to turn it on', () => {
     const r = brain(['init', '--vault', FIXTURE_VAULT]);
     expect(r.code).toBe(2);

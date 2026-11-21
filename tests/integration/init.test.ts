@@ -115,6 +115,27 @@ describe('init', () => {
     expect(existsSync(ctx.dataDir)).toBe(false);
   });
 
+  it('names the configuration file when it exists but cannot be read', () => {
+    mkdirSync(ctx.configPath, { recursive: true });
+    const vault = newVault();
+    const run = () => init({ vault }, ctx);
+    expect(run).toThrow(ConfigError);
+    expect(run).toThrow(ctx.configPath);
+    expect(existsSync(ctx.dataDir)).toBe(false);
+  });
+
+  it('refuses a vault that would hold its own index or configuration', () => {
+    const vault = newVault();
+    const before = snapshot(vault);
+    expect(() => init({ vault }, { ...ctx, dataDir: join(vault, 'data') })).toThrow(InitError);
+    expect(() =>
+      init({ vault }, { ...ctx, configPath: join(vault, '.config', 'brain', 'config.json') }),
+    ).toThrow(InitError);
+    expect(() => init({ vault: root }, ctx)).toThrow(/inside the vault/);
+    expect(snapshot(vault)).toEqual(before);
+    expect(existsSync(ctx.dataDir)).toBe(false);
+  });
+
   it('leaves the same state when run twice', () => {
     const vault = newVault();
     const first = init({ vault }, ctx);
