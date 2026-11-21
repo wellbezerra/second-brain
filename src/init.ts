@@ -2,7 +2,7 @@
 // index folder. It reads the vault path and never writes inside it (ADR 012).
 
 import { mkdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { expandPath, indexDir, type PathContext, parseConfigFile } from './config.js';
 import { readConfigFile } from './config-file.js';
 
@@ -85,5 +85,6 @@ function realPathOf(path: string): string {
 
 function isInside(path: string, folder: string): boolean {
   const rel = relative(folder, path);
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+  const outside = rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+  return !outside;
 }
