@@ -1,7 +1,7 @@
 # Thin wrapper over the npm scripts in package.json, which hold the real logic
 # so that hooks, CI and Windows shells all run the same commands.
 
-.PHONY: setup check-fast check-full dev build
+.PHONY: setup check-fast check-full evals dev build
 
 # Installs dependencies and points git at the committed hooks in scripts/hooks.
 setup:
@@ -10,6 +10,9 @@ setup:
 
 check-fast:
 	npm run check:fast
+
+evals:
+	npm run test:evals
 
 check-full:
 	npm run check:full

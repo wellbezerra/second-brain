@@ -20,6 +20,7 @@ Node 24, strict TypeScript, ESM, Biome (lint + format), Vitest
 make setup        # install dependencies and the git hooks (core.hooksPath)
 make check-fast   # Biome, tsc, test-layer check, unit tests — seconds; your inner loop
 make check-full   # check-fast + integration tests + retrieval evals, under a lock
+make evals        # retrieval evals alone: hit rate@5 and MRR against the thresholds
 make dev          # unit tests in watch mode
 ```
 
@@ -47,6 +48,9 @@ its queue position and waits — do not start a second one to "speed things up".
   that need Ollama skip themselves in CI and when Ollama is not reachable
 - `tests/fixtures/vault/` — the only vault tests ever see; the vault guard in
   `tests/setup/` fails the run if `SECOND_BRAIN_VAULT` leaves the repository
+- `tests/evals/` — retrieval evals: `golden.jsonl` (typical, edge and no-answer
+  cases), pure scoring in `metrics.ts`, and `retriever.ts`, an in-memory
+  stand-in for hybrid search until spec 06 replaces it
 
 Nothing below `src/cli.ts` does I/O with the terminal: logic returns data or
 throws typed errors.
@@ -78,6 +82,14 @@ spec is short and written for humans.
   case in another layer unless it proves a different boundary.
 - Assert on the result, never on the implementation.
 - No test requires Ollama; tests use the deterministic fake embedder.
+
+**Evals.** `check-full` fails when hit rate@5 or MRR over `tests/evals/golden.jsonl`
+drops below `evals` in `package.json`.
+- Every retrieval bug becomes a golden case in the same pull request that fixes it.
+- The evals are deterministic, so the thresholds sit at the current score. Raise
+  them when a change improves it; lowering them needs a reason in the PR.
+- A no-answer case passes only when search returns nothing. Golden cases quote
+  the fixture vault, including its instruction-shaped notes, as data.
 
 **Vault.** The vault is the user's real personal data
 ([ADR 012](docs/adr/012-read-only-vault.md)).
