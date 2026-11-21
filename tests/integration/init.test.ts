@@ -107,7 +107,8 @@ describe('init', () => {
   it('refuses to overwrite a configuration file it cannot read, and names it', () => {
     mkdirSync(join(ctx.configPath, '..'), { recursive: true });
     writeFileSync(ctx.configPath, '{ broken');
-    const run = () => init({ vault: newVault() }, ctx);
+    const vault = newVault();
+    const run = () => init({ vault }, ctx);
     expect(run).toThrow(ConfigError);
     expect(run).toThrow(ctx.configPath);
     expect(readFileSync(ctx.configPath, 'utf8')).toBe('{ broken');
