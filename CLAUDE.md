@@ -41,8 +41,11 @@ its queue position and waits — do not start a second one to "speed things up".
 - `scripts/run-locked.ts` — the `check-full` lock and queue
 - `scripts/check-test-layers.ts` — fails `check-fast` if a unit test imports
   the file system, network, child processes or a database
+- `scripts/review-packet.ts` — writes `.harness/review/<branch>.md`: the spec
+  and the numbered branch diff, nothing else
 - `.claude/hooks/` — Claude Code hooks: write guard, format-on-edit, session
   log in `.harness/sessions/` (git-ignored)
+- `.claude/agents/reviewer.md` — read-only reviewer: READY or blockers
 - `tests/unit/` — unit tests, run by `check-fast`
 - `tests/integration/` — integration tests, run by `check-full` only; tests
   that need Ollama skip themselves in CI and when Ollama is not reachable
@@ -114,6 +117,18 @@ the pull request that contradicts it.
   ([ADR 014](docs/adr/014-one-pr-per-feature-behind-a-flag.md)).
 - Every pull request has labels, is on the "Second Brain" project and is
   assigned to the repository owner. Every merge to `main` produces a release.
+
+## Review
+
+The session that wrote a change does not review it. Before opening a pull
+request, with everything committed:
+
+1. `/review-packet docs/specs/NN-name.md` (no argument for a chore).
+2. In a fresh session: `claude --agent reviewer "Review .harness/review/<branch>.md"`.
+3. Bring each blocker back here, fix it, and repeat until the answer is `READY`.
+
+The reviewer restates the testing, vault and secret rules above; a change to
+those rules updates `.claude/agents/reviewer.md` in the same pull request.
 
 ## Hard limits
 
